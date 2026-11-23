@@ -1465,7 +1465,8 @@ if ("IntersectionObserver" in window){
   io.observe($("markets"));
 } else initTv();
 
-D.chartState = () => ({tf, bars: data.length, wsOpen, noMore, last: data[data.length - 1]});
+D.chartState = () => ({tf, bars: data.length, wsOpen, noMore, first: data[0] && data[0].time, last: data[data.length - 1], range: chart ? chart.timeScale().getVisibleLogicalRange() : null});
+D.loadMore = loadMore;
 renderLive();
 tick(); loadCandles(); loadVault(); wsConnect();
 setInterval(tick, 15000);
