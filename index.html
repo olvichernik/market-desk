@@ -6,6 +6,9 @@
 <title>Рыночный пульт</title>
 <meta name="description" content="Биткойн в реальном времени, уровни и цели, рынки, вольт DOUBLETOP и утренний отчёт.">
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#eef2f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1214" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M6 21l6-7 5 4 9-10' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geologica:wght@500;600;700&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
@@ -207,7 +210,6 @@ input[type=range]{accent-color:var(--accent);width:100%;min-width:0;margin:0;hei
 footer{color:var(--ink-3);font-size:13px;max-width:70ch;border-top:1px solid var(--rule);padding-top:16px}
 
 /* live additions for the hosted site */
-html{scroll-padding-top:8px}
 body{margin:0}
 img{max-width:100%}
 [hidden]{display:none!important}
@@ -276,28 +278,19 @@ body.noscroll{overflow:hidden}
   .page{padding-left:max(24px, env(safe-area-inset-left, 0px));padding-right:max(24px, env(safe-area-inset-right, 0px))}
   .mk-row2{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
 }
-@media (min-width:1400px){
+@media (min-width:1200px){
   .page{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:28px 20px;align-items:start}
   .page > *{grid-column:1 / -1}
-  .page > header{order:0}
-  #chart{order:1;grid-column:span 8}
-  #today{order:2;grid-column:span 4}
-  #markets{order:3}
-  #etf{order:4}
-  #fed{order:5}
-  #ladder{order:6}
-  #vault{order:7}
-  .page > footer{order:9}
-  #today #dgPanel{max-height:calc(var(--chart-h) + 118px);overflow:auto}
+  #chart{grid-column:span 8}
+  #today{grid-column:span 4}
+  #today:not(.folded) #dgPanel{max-height:calc(var(--chart-h) + 118px);overflow:auto}
+}
+@media (min-width:1400px){
   .top{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:12px 16px}
   .top > *{grid-column:1 / -1}
-  .top > .top-line{grid-row:1}
-  .top > .hero{grid-column:1;grid-row:2}
-  .top > .tiles.q{grid-column:2;grid-row:2}
+  .top > .hero{grid-column:1}
+  .top > .tiles.q{grid-column:2}
   .top > .tiles.q .tile{display:flex;flex-direction:column;justify-content:center}
-  .top > .live-line{grid-row:3}
-  .top > .jump{grid-row:4}
-  .top > #status{grid-row:5}
 }
 @media (min-width:1700px){
   #ladder{grid-column:span 7}
@@ -390,14 +383,105 @@ body.noscroll{overflow:hidden}
 .fd-seg i{display:block;min-width:3px;flex-basis:0;border-radius:2px}
 .fd-legend{display:flex;flex-wrap:wrap;gap:4px 14px}
 .fd-tbl td .fo-dot{margin-right:7px}
+
+/* ---------- sticky bar: sections, current place, the price once the big one is out of sight ---------- */
+:root{--bar-h:48px;--shade:rgba(14,19,22,.14)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--shade:rgba(0,0,0,.55)}}
+html{scroll-padding-top:calc(var(--bar-h) + 12px)}
+.bar{position:sticky;top:0;z-index:40;background:var(--plane);border-bottom:1px solid transparent;transition:border-color .2s;padding-top:env(safe-area-inset-top, 0px)}
+.bar.stuck{border-bottom-color:var(--rule)}
+.bar-in{display:flex;align-items:center;gap:4px;height:48px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+.bar-in::-webkit-scrollbar{display:none}
+.bar-brand{display:none;flex:none;margin-right:18px;font:700 17px/1 var(--f-display);letter-spacing:-.01em;color:var(--ink);text-decoration:none;white-space:nowrap}
+.bar-nav{display:flex;flex:none;gap:2px;margin-left:-11px}
+.bar-nav a{display:flex;align-items:center;height:34px;padding:0 11px;border-radius:999px;font:500 14px/1 var(--f-body);color:var(--ink-2);text-decoration:none;white-space:nowrap}
+@media (hover:hover){.bar-nav a:hover{color:var(--ink);background:var(--sunken)}}
+.bar-nav a[aria-current="true"]{color:var(--accent-strong);background:var(--accent-wash)}
+.bar-px{display:none;position:sticky;right:max(16px, env(safe-area-inset-right, 0px));z-index:1;flex:none;margin-left:auto;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:999px;
+  background:var(--surface);border:1px solid var(--rule-strong);color:var(--ink);text-decoration:none;white-space:nowrap;font:600 14px/1 var(--f-mono);font-variant-numeric:tabular-nums}
+.bar-px:hover{border-color:var(--ink-3)}
+.bar-px b{font-weight:700}
+.bar-px .chg{font-size:12.5px}
+.bar-px .chg:empty{display:none}
+.bar-px .live-dot{margin-right:0;flex:none}
+.bar.has-px:not(.no-px) .bar-px{display:flex;animation:px-in .18s ease-out}
+@keyframes px-in{from{opacity:0}to{opacity:1}}
+/* on a phone the chip rides over the right end of the scrolling row: fade what slides under it */
+.bar-px::before{content:"";position:absolute;right:100%;top:-8px;bottom:-8px;width:20px;margin-right:1px;background:linear-gradient(to right, transparent, var(--plane));pointer-events:none}
+.bar-px::after{content:"";position:absolute;left:100%;top:-8px;bottom:-8px;width:48px;margin-left:1px;background:var(--plane);pointer-events:none}
+@media (max-width:559px){
+  .bar-px .live-dot,.bar-px .bx{display:none} .bar-px{padding:0 10px;gap:5px}
+  .bar-nav{gap:0;margin-left:-10px} .bar-nav a{padding:0 10px}
+}
+/* more sections than fit: the row fades at the right edge until the price chip takes that place */
+@media (max-width:899px){.bar:not(.has-px) .bar-in,.bar.no-px .bar-in{-webkit-mask-image:linear-gradient(to right, #000 calc(100% - 22px), transparent);mask-image:linear-gradient(to right, #000 calc(100% - 22px), transparent)}}
+@media (min-width:900px){.bar-brand{display:block} .bar-nav{margin-left:0}}
+@media (min-width:1100px){.bar-in{padding-left:max(24px, env(safe-area-inset-left, 0px));padding-right:max(24px, env(safe-area-inset-right, 0px))} .bar-px{right:max(24px, env(safe-area-inset-right, 0px))}}
+@media (prefers-reduced-motion: reduce){.bar-px{animation:none!important} .fold svg{transition:none!important}}
+body.noscroll .bar{visibility:hidden}
+
+/* header: the title lives in the bar on a wide screen */
+.top-line h1{flex:1 0 100%}
+.top-line .stamp{margin:0}
+@media (min-width:900px){.top-line h1{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}}
+.page{padding-top:8px}
+
+/* folding sections */
+@media (min-width:760px){h2{font-size:21px}}
+.fold{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border-radius:6px;-webkit-tap-highlight-color:transparent}
+.fold:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.fold svg{width:16px;height:16px;flex:none;color:var(--ink-3);transition:transform .15s}
+.fold:hover svg{color:var(--ink)}
+.sec.folded .fold svg{transform:rotate(-90deg)}
+.sec.folded > :not(.sec-head){display:none!important}
+.sec.folded > .sec-head > :not(h2){display:none}
+.sec.folded > .sec-head{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r);padding:12px 16px}
+.sec.folded > .sec-head h2{flex:1}
+.sec.folded .fold{display:flex;justify-content:space-between;width:100%}
+
+/* digest: the note runs under the whole row instead of squeezing into the first column */
+.tbl tr.has-note td{border-bottom:0;padding-bottom:1px}
+.tbl tr.note td{padding-top:0;padding-bottom:9px;color:var(--ink-3);font-size:12.5px;line-height:1.35}
+
+/* a table wider than its box shows a shadow on the side that still has content */
+.scroll{background:
+  linear-gradient(to right, var(--surface) 40%, transparent) left center / 28px 100% no-repeat local,
+  linear-gradient(to left, var(--surface) 40%, transparent) right center / 28px 100% no-repeat local,
+  linear-gradient(to right, var(--shade), transparent) left center / 12px 100% no-repeat scroll,
+  linear-gradient(to left, var(--shade), transparent) right center / 12px 100% no-repeat scroll}
+
+/* phone: folder buttons in one swipeable row */
+@media (max-width:759px){
+  #fold{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding-inline:16px}
+  #fold::-webkit-scrollbar{display:none}
+  #fold button{flex:none}
+}
 </style>
 </head>
 <body>
+<div class="bar" id="bar">
+  <div class="bar-in" id="barIn">
+    <a class="bar-brand" href="#top" data-go="top" title="Наверх">Рыночный пульт</a>
+    <nav class="bar-nav" id="nav" aria-label="Разделы">
+      <a href="#top" data-go="top">Обзор</a>
+      <a href="#chart" data-go="chart">График</a>
+      <a href="#today" data-go="today">Отчёт</a>
+      <a href="#markets" data-go="markets">Рынки</a>
+      <a href="#etf" data-go="etf">ETF</a>
+      <a href="#fed" data-go="fed">ФРС</a>
+      <a href="#ladder" data-go="ladder">Уровни</a>
+      <a href="#vault" data-go="vault">Вольт</a>
+    </nav>
+    <a class="bar-px" id="barPx" href="#top" data-go="top" tabindex="-1" aria-hidden="true"><span class="live-dot off" id="bDot"></span><b id="bPrice">—</b><span class="chg" id="bChg"></span></a>
+  </div>
+</div>
 <div class="page">
 
-  <header class="top">
+  <header class="top" id="top">
     <div class="top-line">
       <h1>Рыночный пульт</h1>
+      <p class="stamp live-line"><span class="live-dot off" id="liveDot"></span><span id="liveText">Подключаюсь к Hyperliquid…</span></p>
       <p class="stamp" id="stamp">Загружаю отчёты…</p>
     </div>
 
@@ -419,7 +503,6 @@ body.noscroll{overflow:hidden}
       </div>
     </div>
 
-    <p class="stamp live-line"><span class="live-dot off" id="liveDot"></span><span id="liveText">Подключаюсь к Hyperliquid…</span></p>
     <div class="tiles q">
       <div class="tile"><div class="lab">Фандинг, перп BTC</div><div class="tile-v" id="lFund">—</div><div class="tile-s" id="lFundS"></div></div>
       <div class="tile"><div class="lab">Открытый интерес, перп</div><div class="tile-v" id="lOi">—</div><div class="tile-s" id="lOiS"></div></div>
@@ -427,15 +510,6 @@ body.noscroll{overflow:hidden}
       <div class="tile"><div class="lab">Плечо вольта</div><div class="tile-v" id="lLev">—</div><div class="tile-s" id="lLevS"></div></div>
     </div>
 
-    <nav class="jump" aria-label="Разделы">
-      <button type="button" data-go="chart">График BTC</button>
-      <button type="button" data-go="markets">Рынки</button>
-      <button type="button" data-go="etf">ETF</button>
-      <button type="button" data-go="fed">ФРС</button>
-      <button type="button" data-go="today">Утренний отчёт</button>
-      <button type="button" data-go="ladder">Уровни и цели</button>
-      <button type="button" data-go="vault">Вольт</button>
-    </nav>
 
     <div class="banner" id="status" role="status" hidden><span id="statusText"></span><button type="button" class="btn" id="retry" hidden>Повторить</button></div>
   </header>
@@ -501,72 +575,6 @@ body.noscroll{overflow:hidden}
       <div class="dg-block" id="dgUsBox"><h4>Прошлая сессия США</h4><p id="dgUs" style="max-width:68ch"></p></div>
       <div class="dg-block" id="dgCryptoBox"><h4>Биткойн и крипторынок</h4><p id="dgCrypto" style="max-width:68ch"></p></div>
       <div class="dg-block" id="dgSrcBox"><h4>Источники</h4><ul class="src" id="dgSrc"></ul></div>
-    </div>
-  </section>
-
-  <section class="sec" id="ladder">
-    <div class="sec-head">
-      <h2>Уровни и цели</h2>
-      <p class="sec-note" id="lvStamp"></p>
-    </div>
-    <div class="duo">
-      <div class="panel pane-map">
-        <div class="map-cols" aria-hidden="true"><span>Рынок</span><span>Цели на покупку</span></div>
-        <div class="map" id="map"></div>
-        <ul class="legend" aria-label="Обозначения">
-          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect class="mp-dnow" x="3" y="3" width="8" height="8" transform="rotate(45 7 7)"/></svg>цена сейчас</li>
-          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle class="mp-dwhat" cx="7" cy="7" r="5"/></svg>цена «если»</li>
-          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle class="mp-tier" cx="7" cy="7" r="4.5"/></svg>цель ждёт</li>
-          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle class="mp-tier hit" cx="7" cy="7" r="5"/></svg>цель сработает</li>
-          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><line class="mp-tick" x1="2" y1="7" x2="12" y2="7"/></svg>рыночный уровень</li>
-        </ul>
-        <div class="scroll">
-          <table class="tbl" id="lvTable">
-            <thead><tr><th>Уровень</th><th class="r">Цена</th><th class="r">От текущей</th></tr></thead>
-            <tbody><tr><td colspan="3" class="muted">Уровни появятся вместе с отчётом.</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="pane-calc">
-        <div class="panel what">
-          <label class="lab" for="whatNum">Если цена BTC будет</label>
-          <div class="what-row">
-            <span class="what-in"><span class="cur">$</span><input id="whatNum" type="number" inputmode="numeric" min="0" step="100" placeholder="60000"></span>
-            <span class="what-delta" id="whatDelta"></span>
-          </div>
-          <input id="whatRange" type="range" step="100" min="20000" max="100000" value="60000" aria-label="Цена BTC, ползунок">
-          <div class="chips" id="whatChips"></div>
-        </div>
-
-        <div class="panel stack">
-          <h3>Калькулятор лестницы</h3>
-          <div class="field">
-            <label class="lab" for="budget">Бюджет на покупки, $</label>
-            <input id="budget" type="number" inputmode="numeric" min="0" step="500" placeholder="10000">
-          </div>
-          <p class="hint">Бюджет делится поровну между целями: цена дошла до цели, эта часть куплена. Число остаётся только в вашем браузере, по умолчанию стоит пример.</p>
-        </div>
-
-        <div class="tiles">
-          <div class="tile"><div class="lab">Сработает целей</div><div class="tile-v" id="rFilled">—</div><div class="tile-s" id="rFilledS"></div></div>
-          <div class="tile"><div class="lab">Потрачено</div><div class="tile-v" id="rSpent">—</div><div class="tile-s" id="rSpentS"></div></div>
-          <div class="tile"><div class="lab">Куплено BTC</div><div class="tile-v" id="rBtc">—</div><div class="tile-s" id="rBtcS"></div></div>
-          <div class="tile"><div class="lab">Средняя цена</div><div class="tile-v" id="rAvg">—</div><div class="tile-s" id="rAvgS"></div></div>
-          <div class="tile"><div class="lab">Результат</div><div class="tile-v" id="rPnl">—</div><div class="tile-s" id="rPnlS"></div></div>
-          <div class="tile"><div class="lab">До возврата в ноль</div><div class="tile-v" id="rBack">—</div><div class="tile-s" id="rBackS"></div></div>
-        </div>
-
-        <div class="panel stack">
-          <h3>Лестница на каждом уровне</h3>
-          <div class="scroll">
-            <table class="tbl" id="scn">
-              <thead><tr><th>Цена BTC</th><th class="r">Целей</th><th class="r">Куплено BTC</th><th class="r">Средняя</th><th class="r">Результат</th></tr></thead>
-              <tbody><tr><td colspan="5" class="muted">Таблица заполнится вместе с отчётом.</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -659,6 +667,72 @@ body.noscroll{overflow:hidden}
           </table>
         </div>
         <p class="hint" id="fdSchedNote"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="ladder">
+    <div class="sec-head">
+      <h2>Уровни и цели</h2>
+      <p class="sec-note" id="lvStamp"></p>
+    </div>
+    <div class="duo">
+      <div class="panel pane-map">
+        <div class="map-cols" aria-hidden="true"><span>Рынок</span><span>Цели на покупку</span></div>
+        <div class="map" id="map"></div>
+        <ul class="legend" aria-label="Обозначения">
+          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect class="mp-dnow" x="3" y="3" width="8" height="8" transform="rotate(45 7 7)"/></svg>цена сейчас</li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle class="mp-dwhat" cx="7" cy="7" r="5"/></svg>цена «если»</li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle class="mp-tier" cx="7" cy="7" r="4.5"/></svg>цель ждёт</li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle class="mp-tier hit" cx="7" cy="7" r="5"/></svg>цель сработает</li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><line class="mp-tick" x1="2" y1="7" x2="12" y2="7"/></svg>рыночный уровень</li>
+        </ul>
+        <div class="scroll">
+          <table class="tbl" id="lvTable">
+            <thead><tr><th>Уровень</th><th class="r">Цена</th><th class="r">От текущей</th></tr></thead>
+            <tbody><tr><td colspan="3" class="muted">Уровни появятся вместе с отчётом.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="pane-calc">
+        <div class="panel what">
+          <label class="lab" for="whatNum">Если цена BTC будет</label>
+          <div class="what-row">
+            <span class="what-in"><span class="cur">$</span><input id="whatNum" type="number" inputmode="numeric" min="0" step="100" placeholder="60000"></span>
+            <span class="what-delta" id="whatDelta"></span>
+          </div>
+          <input id="whatRange" type="range" step="100" min="20000" max="100000" value="60000" aria-label="Цена BTC, ползунок">
+          <div class="chips" id="whatChips"></div>
+        </div>
+
+        <div class="panel stack">
+          <h3>Калькулятор лестницы</h3>
+          <div class="field">
+            <label class="lab" for="budget">Бюджет на покупки, $</label>
+            <input id="budget" type="number" inputmode="numeric" min="0" step="500" placeholder="10000">
+          </div>
+          <p class="hint">Бюджет делится поровну между целями: цена дошла до цели, эта часть куплена. Число остаётся только в вашем браузере, по умолчанию стоит пример.</p>
+        </div>
+
+        <div class="tiles">
+          <div class="tile"><div class="lab">Сработает целей</div><div class="tile-v" id="rFilled">—</div><div class="tile-s" id="rFilledS"></div></div>
+          <div class="tile"><div class="lab">Потрачено</div><div class="tile-v" id="rSpent">—</div><div class="tile-s" id="rSpentS"></div></div>
+          <div class="tile"><div class="lab">Куплено BTC</div><div class="tile-v" id="rBtc">—</div><div class="tile-s" id="rBtcS"></div></div>
+          <div class="tile"><div class="lab">Средняя цена</div><div class="tile-v" id="rAvg">—</div><div class="tile-s" id="rAvgS"></div></div>
+          <div class="tile"><div class="lab">Результат</div><div class="tile-v" id="rPnl">—</div><div class="tile-s" id="rPnlS"></div></div>
+          <div class="tile"><div class="lab">До возврата в ноль</div><div class="tile-v" id="rBack">—</div><div class="tile-s" id="rBackS"></div></div>
+        </div>
+
+        <div class="panel stack">
+          <h3>Лестница на каждом уровне</h3>
+          <div class="scroll">
+            <table class="tbl" id="scn">
+              <thead><tr><th>Цена BTC</th><th class="r">Целей</th><th class="r">Куплено BTC</th><th class="r">Средняя</th><th class="r">Результат</th></tr></thead>
+              <tbody><tr><td colspan="5" class="muted">Таблица заполнится вместе с отчётом.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -1003,11 +1077,11 @@ function renderDigest(){
     const tb = h("tbody");
     tb.append(h("tr", {class: "grp"}, h("th", {colspan: 3, scope: "colgroup", text: g.name})));
     for (const r of g.rows){
-      const nameCell = h("td", null, r.name, r.stale ? [" ", h("span", {class: "pill", text: "не обновлено"})] : null,
-        r.note ? h("span", {class: "sub", text: r.note}) : null);
-      tb.append(h("tr", null, nameCell,
+      const nameCell = h("td", null, r.name, r.stale ? [" ", h("span", {class: "pill", text: "не обновлено"})] : null);
+      tb.append(h("tr", {class: r.note ? "has-note" : null}, nameCell,
         h("td", {class: "r", text: fmtLevel(r.level, r.unit)}),
         h("td", {class: "r"}, chgNode(r.chg, r.chgText))));
+      if (r.note) tb.append(h("tr", {class: "note"}, h("td", {colspan: 3, text: r.note})));
     }
     table.append(tb);
   }
@@ -2354,6 +2428,166 @@ for (const b of document.querySelectorAll("#foRange button")) b.addEventListener
   renderOdds(); loadOddsHistory();
 });   // refetches only when the last try is older than 15 minutes
 document.addEventListener("visibilitychange", () => { if (!document.hidden){ tick(); refreshTail(); loadVault(); pollQuotes(); loadSoso(ETF[eIdx].k); pollOdds(); if (FO && !Object.keys(foHist).length) loadOddsHistory(); } });
+})();
+</script>
+<script>
+/* Navigation layer: sticky bar with the current section, deep links, folding sections. */
+(() => {
+"use strict";
+const D = window.DESK; if (!D) return;
+const {S, $} = D;
+const bar = $("bar"), scroller = $("barIn"), chip = $("barPx");
+const links = [...document.querySelectorAll("#nav a[data-go]")];
+const ids = links.map((a) => a.dataset.go);
+const calm = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const barH = () => bar.offsetHeight || 48;
+const atBottom = () => window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+let active = null, picked = null, raf = 0;
+
+function syncBarVar(){ document.documentElement.style.setProperty("--bar-h", barH() + "px"); }
+syncBarVar();
+if ("ResizeObserver" in window) new ResizeObserver(syncBarVar).observe(bar);
+
+/* ---------- which section is on screen ---------- */
+function current(){
+  const line = barH() + 28;
+  let best = null, bestTop = -Infinity;
+  for (const id of ids){
+    const el = $(id); if (!el || el.hidden) continue;
+    const t = el.getBoundingClientRect().top;
+    if (t <= line && t > bestTop + 3){ best = id; bestTop = t; }   // side-by-side sections share a top: the first one wins
+  }
+  if (atBottom() && window.scrollY > 0){   // short sections at the very end never reach the line
+    for (const id of ids){
+      const el = $(id); if (!el || el.hidden) continue;
+      const t = el.getBoundingClientRect().top;
+      if (t > bestTop + 3 && t < window.innerHeight - 120){ best = id; bestTop = t; }
+    }
+  }
+  if (picked && picked !== best){   // the reader asked for a neighbour that starts on the same line, or one that cannot reach the top
+    const el = $(picked), t = el ? el.getBoundingClientRect().top : NaN;
+    if (Math.abs(t - bestTop) <= 3 || (atBottom() && t > line && t < window.innerHeight - 120)) best = picked;
+  }
+  return best || ids[0];
+}
+function reveal(a){   // keep the active link visible in the scrolling row on a phone
+  if (scroller.scrollWidth <= scroller.clientWidth + 1) return;
+  const cover = bar.classList.contains("has-px") ? chip.offsetWidth + 28 : 0;
+  const room = scroller.clientWidth - cover;
+  const left = a.offsetLeft - Math.max(12, (room - a.offsetWidth) / 2);
+  scroller.scrollTo({left: Math.max(0, left), behavior: calm() ? "auto" : "smooth"});
+}
+function spy(){
+  raf = 0;
+  bar.classList.toggle("stuck", window.scrollY > 4);
+  const id = current();
+  if (id === active) return;
+  active = id;
+  for (const a of links){
+    if (a.dataset.go === id){ a.setAttribute("aria-current", "true"); reveal(a); }
+    else a.removeAttribute("aria-current");
+  }
+}
+const queue = () => { if (!raf) raf = requestAnimationFrame(spy); };
+window.addEventListener("scroll", queue, {passive: true});
+window.addEventListener("resize", queue);
+for (const ev of ["wheel", "touchmove", "keydown"]) window.addEventListener(ev, () => { picked = null; }, {passive: true});
+
+/* ---------- jumping ---------- */
+const targetY = (el) => Math.max(0, Math.round(el.getBoundingClientRect().top + window.scrollY - barH() - 12));
+function go(id, smooth, keepUrl){
+  const el = $(id); if (!el) return;
+  if (el.classList.contains("folded")) setFold(el, false);
+  picked = id === "top" ? null : id;
+  const y = id === "top" ? 0 : targetY(el);
+  if (smooth && !calm()){
+    const d = y - window.scrollY, far = window.innerHeight * 1.5;
+    if (Math.abs(d) > far) window.scrollTo(0, y - Math.sign(d) * far * 0.6);   // a long trip starts close to the target instead of crawling through the whole page
+    window.scrollTo({top: y, behavior: "smooth"});
+  } else window.scrollTo(0, y);
+  if (!keepUrl) try { history.replaceState(null, "", id === "top" ? location.pathname + location.search : "#" + id); } catch (e){}
+  queue();
+  // blocks above keep loading and change height: hold the section in place until the reader takes over
+  if (id !== "top") for (const ms of [700, 1500, 2600, 4500]) setTimeout(() => {
+    if (picked !== id) return;
+    const y2 = Math.min(targetY(el), document.documentElement.scrollHeight - window.innerHeight);
+    if (Math.abs(y2 - window.scrollY) > 6) window.scrollTo(0, y2);
+  }, ms);
+}
+for (const a of document.querySelectorAll("#bar a[data-go]")) a.addEventListener("click", (e) => {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;   // a new tab stays a new tab
+  e.preventDefault(); go(a.dataset.go, true);
+});
+window.addEventListener("hashchange", () => { const id = location.hash.slice(1); if (ids.includes(id)) go(id, true, true); });
+
+/* ---------- the price in the bar once the big one has scrolled away ---------- */
+function mirror(){
+  const L = S.live, t = $("hPrice").textContent, ok = /\d/.test(t);
+  $("bPrice").textContent = t;
+  const c = $("bChg");
+  if (L && L.chg != null && isFinite(L.chg)){
+    const arrow = L.chg > 0 ? "▲" : L.chg < 0 ? "▼" : "", bx = document.createElement("span");
+    bx.className = "bx"; bx.textContent = (arrow ? " " : "") + D.pct(L.chg);
+    c.replaceChildren(arrow, bx); c.className = "chg " + (L.chg > 0 ? "up" : L.chg < 0 ? "down" : "flat");
+  } else { c.replaceChildren(); c.className = "chg"; }
+  $("bDot").classList.toggle("off", !L);
+  chip.title = (L ? "Живая цена биткойна, спот на Hyperliquid" : "Цена из утреннего отчёта") + ". Нажмите, чтобы вернуться наверх";
+  bar.classList.toggle("no-px", !ok);
+  const title = (L && ok ? t + " · " : "") + "Рыночный пульт";   // the live price is readable from a background tab
+  if (document.title !== title) document.title = title;
+}
+new MutationObserver(mirror).observe($("hPrice").parentNode, {childList: true, subtree: true, characterData: true});
+mirror();
+if ("IntersectionObserver" in window){
+  let io = null;
+  const watch = () => {
+    if (io) io.disconnect();
+    io = new IntersectionObserver((es) => {
+      const out = !es[es.length - 1].isIntersecting;
+      bar.classList.toggle("has-px", out);
+      chip.tabIndex = out ? 0 : -1; chip.setAttribute("aria-hidden", String(!out));
+      const a = links.find((x) => x.dataset.go === active); if (a) reveal(a);
+    }, {rootMargin: "-" + (barH() + 4) + "px 0px 0px 0px"});
+    io.observe($("hPrice"));
+  };
+  watch();
+}
+
+/* ---------- folding sections ---------- */
+const FOLD_KEY = "desk.fold";
+let folded = [];
+try { const v = JSON.parse(localStorage.getItem(FOLD_KEY) || "[]"); if (Array.isArray(v)) folded = v.filter((x) => typeof x === "string"); } catch (e){}
+function showFold(sec, on){
+  sec.classList.toggle("folded", on);
+  const b = sec.querySelector(":scope > .sec-head .fold");
+  if (b){ b.setAttribute("aria-expanded", String(!on)); b.title = on ? "Развернуть раздел" : "Свернуть раздел"; }
+}
+function setFold(sec, on){
+  showFold(sec, on);
+  folded = folded.filter((x) => x !== sec.id); if (on) folded.push(sec.id);
+  try { localStorage.setItem(FOLD_KEY, JSON.stringify(folded)); } catch (e){}
+  if (!on) D.recalc();   // the level map is drawn to the width of its box, which was zero while folded
+  queue();
+}
+const CHEVRON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+for (const id of ids){
+  const sec = $(id); if (!sec || sec.tagName !== "SECTION") continue;
+  const h2 = sec.querySelector(":scope > .sec-head > h2"); if (!h2) continue;
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "fold"; b.setAttribute("aria-controls", id);
+  const label = document.createElement("span"); label.textContent = h2.textContent;
+  b.append(label); b.insertAdjacentHTML("beforeend", CHEVRON);
+  h2.replaceChildren(b);
+  b.addEventListener("click", () => setFold(sec, !sec.classList.contains("folded")));
+  showFold(sec, folded.includes(id));
+}
+if (folded.length) D.recalc();
+
+/* ---------- a link straight to a section ---------- */
+const first = location.hash.slice(1);
+if (ids.includes(first) && first !== "top") go(first, false, true);
+spy();
+D.nav = () => ({active, picked, folded: folded.slice(), px: bar.classList.contains("has-px"), barH: barH()});
 })();
 </script>
 </body>
