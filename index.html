@@ -213,11 +213,11 @@ img{max-width:100%}
 [hidden]{display:none!important}
 .tiles.q{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (min-width:760px){.tiles.q{grid-template-columns:repeat(4,minmax(0,1fr))}}
-.seg{display:flex;gap:4px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
 .seg button{border:1px solid var(--rule-strong);background:var(--surface);border-radius:8px;padding:6px 12px;font-weight:600;font-size:14px;cursor:pointer;min-height:36px;min-width:44px}
 .seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-.lw{height:360px}
-@media (min-width:760px){.lw{height:460px}}
+.lw{height:420px}
+@media (min-width:760px){.lw{height:560px}}
 .lw-sm{height:220px}
 .tvbox{height:520px;position:relative}
 .tvbox.cal{height:480px}
@@ -225,6 +225,17 @@ img{max-width:100%}
 .tvbox .tradingview-widget-container{position:relative;z-index:1;background:var(--surface)}
 .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--up);margin-right:6px;vertical-align:baseline}
 .live-dot.off{background:var(--ink-3)}
+.seg button{padding:6px 10px;min-width:40px}
+.chart-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.lw-wrap{position:relative;min-width:0}
+.lw-legend{position:absolute;left:6px;top:4px;z-index:3;pointer-events:none;font:500 12px/1.4 var(--f-mono);color:var(--ink-2);background:var(--surface);opacity:.92;padding:1px 6px;border-radius:4px;white-space:pre-wrap;max-width:calc(100% - 80px)}
+.lw-legend:empty{display:none}
+.chart-panel.expanded{position:fixed;inset:0;z-index:50;border:0;border-radius:0;display:flex;flex-direction:column;
+  padding:max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px))}
+.chart-panel.expanded .lw-wrap{flex:1;min-height:0}
+.chart-panel.expanded .lw{height:100%}
+.chart-panel.expanded #lwNote{display:none}
+body.noscroll{overflow:hidden}
 </style>
 </head>
 <body>
@@ -277,15 +288,22 @@ img{max-width:100%}
   <section class="sec" id="chart">
     <div class="sec-head">
       <h2>График BTC</h2>
-      <div class="seg" id="tf" role="group" aria-label="Интервал свечей">
-        <button type="button" data-tf="1h" aria-pressed="false">1ч</button>
-        <button type="button" data-tf="4h" aria-pressed="false">4ч</button>
-        <button type="button" data-tf="1d" aria-pressed="true">1д</button>
-        <button type="button" data-tf="1w" aria-pressed="false">1н</button>
-      </div>
+      <p class="sec-note">Hyperliquid, бессрочный контракт</p>
     </div>
-    <div class="panel stack">
-      <div class="lw" id="lw"></div>
+    <div class="panel stack chart-panel" id="chartPanel">
+      <div class="chart-bar">
+        <div class="seg" id="tf" role="group" aria-label="Интервал свечей">
+          <button type="button" data-tf="1m" aria-pressed="false">1м</button>
+          <button type="button" data-tf="5m" aria-pressed="false">5м</button>
+          <button type="button" data-tf="15m" aria-pressed="false">15м</button>
+          <button type="button" data-tf="1h" aria-pressed="false">1ч</button>
+          <button type="button" data-tf="4h" aria-pressed="false">4ч</button>
+          <button type="button" data-tf="1d" aria-pressed="true">1д</button>
+          <button type="button" data-tf="1w" aria-pressed="false">1н</button>
+        </div>
+        <button type="button" class="btn" id="expand">Развернуть</button>
+      </div>
+      <div class="lw-wrap"><div class="lw" id="lw"></div><div class="lw-legend" id="lwLegend"></div></div>
       <p class="hint" id="lwNote">Загружаю свечи с Hyperliquid…</p>
     </div>
   </section>
@@ -1143,12 +1161,13 @@ load();
 </script>
 
 <script>
-/* Live layer: Hyperliquid public API straight from the browser, plus TradingView widgets. */
+/* Live layer: Hyperliquid public API and WebSocket straight from the browser, plus TradingView widgets. */
 (() => {
 "use strict";
 const D = window.DESK; if (!D) return;
-const {S, $, h, usd, usdBig, pct, nf0, nf2, btcf} = D;
+const {S, $, h, usd, usdBig, pct, nf0, nf2} = D;
 const API = "https://api.hyperliquid.xyz/info";
+const WSS = "wss://api.hyperliquid.xyz/ws";
 const VAULT = "0x53f8f390fd4f70941c5d160a964f6893c8dbceff";
 const LW = window.LightweightCharts;
 const dark = () => window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -1163,11 +1182,12 @@ async function hl(body){
 }
 
 /* ---------- header: price, funding, open interest, volume ---------- */
-let lastPx = 0, fails = 0;
+let lastPx = 0, fails = 0, wsOpen = false;
 function renderLive(){
   const L = S.live, set = (id, v) => { $(id).textContent = v; };
-  const dot = $("liveDot"); dot.classList.toggle("off", !L);
-  set("liveText", L ? "Живые данные Hyperliquid, обновлено в " + clock(L.at) : fails > 1 ? "Живые данные Hyperliquid сейчас недоступны, показаны цифры из отчёта" : "Подключаюсь к Hyperliquid…");
+  $("liveDot").classList.toggle("off", !L);
+  set("liveText", L ? "Hyperliquid, " + (wsOpen ? "поток в реальном времени" : "обновление каждые 15 секунд") + ", последние данные в " + clock(L.at)
+    : fails > 1 ? "Живые данные Hyperliquid сейчас недоступны, показаны цифры из отчёта" : "Подключаюсь к Hyperliquid…");
   if (!L){ for (const id of ["lFund","lOi","lVol"]) set(id, "—"); return; }
   const fund = $("lFund"); fund.classList.remove("up", "down");
   fund.textContent = pct(L.funding * 24 * 365 * 100, 1);
@@ -1176,27 +1196,36 @@ function renderLive(){
   set("lOi", big(L.oi * L.price)); set("lOiS", nf0.format(L.oi) + " BTC в открытых позициях");
   set("lVol", big(L.vol)); set("lVolS", "оборот перпа BTC за сутки");
 }
+function applyCtx(c){
+  const px = +c.midPx || +c.markPx, prev = +c.prevDayPx;
+  if (!(px > 0)) return;
+  S.live = {price: px, chg: prev ? (px / prev - 1) * 100 : null, funding: +c.funding, oi: +c.openInterest, vol: +c.dayNtlVlm, at: Date.now()};
+  fails = 0;
+  if (!lastPx || Math.abs(px / lastPx - 1) > 0.0004){ lastPx = px; D.recalc(); } else D.renderHero();
+  renderLive();
+}
 async function tick(){
+  if (wsOpen && S.live && Date.now() - S.live.at < 20000) return;
   try {
     const [meta, ctxs] = await hl({type: "metaAndAssetCtxs"});
-    const i = meta.universe.findIndex((u) => u.name === "BTC");
-    const c = ctxs[i]; const px = +c.midPx || +c.markPx; const prev = +c.prevDayPx;
-    if (!(px > 0)) throw new Error("no price");
-    S.live = {price: px, chg: prev ? (px / prev - 1) * 100 : null, funding: +c.funding, oi: +c.openInterest, vol: +c.dayNtlVlm, at: Date.now()};
-    fails = 0;
-    if (!lastPx || Math.abs(px / lastPx - 1) > 0.0004){ lastPx = px; D.recalc(); } else D.renderHero();
+    applyCtx(ctxs[meta.universe.findIndex((u) => u.name === "BTC")]);
   } catch (e){
     fails++;
     if (S.live && Date.now() - S.live.at > 120000){ S.live = null; D.recalc(); }
+    renderLive();
   }
-  renderLive();
 }
 
 /* ---------- BTC chart ---------- */
-const TF = {"1h": 30 * 864e5, "4h": 150 * 864e5, "1d": 900 * 864e5, "1w": 2200 * 864e5};
-const STEP = {"1h": 3600e3, "4h": 4 * 3600e3, "1d": 864e5, "1w": 7 * 864e5};
-let chart = null, series = null, lines = [], tf = "1d", lastTime = 0, chartOk = false;
-try { const v = localStorage.getItem("desk.tf"); if (v && TF[v]) tf = v; } catch (e){}
+const STEP = {"1m": 60e3, "5m": 300e3, "15m": 900e3, "1h": 3600e3, "4h": 14400e3, "1d": 864e5, "1w": 6048e5};
+const PAGE = 1000;
+const UPV = "rgba(12,163,12,.35)", DNV = "rgba(208,59,59,.35)";
+let chart = null, series = null, volSeries = null, lines = [], tf = "1d";
+let data = [], vols = [], earliest = 0, noMore = false, loadingMore = false, gen = 0, chartOk = false, expanded = false;
+try { const v = localStorage.getItem("desk.tf"); if (v && STEP[v]) tf = v; } catch (e){}
+const shift = () => STEP[tf] < 864e5 ? -new Date().getTimezoneOffset() * 60 : 0;
+const bar = (r) => ({time: Math.floor(r.t / 1000) + shift(), open: +r.o, high: +r.h, low: +r.l, close: +r.c});
+const volBar = (r, b) => ({time: b.time, value: +r.v, color: b.close >= b.open ? UPV : DNV});
 
 function chartOpts(){
   return {
@@ -1204,13 +1233,14 @@ function chartOpts(){
     layout: {background: {type: "solid", color: css("--surface")}, textColor: css("--ink-2"), fontFamily: css("--f-body") || "system-ui"},
     grid: {vertLines: {color: css("--rule")}, horzLines: {color: css("--rule")}},
     rightPriceScale: {borderColor: css("--rule-strong")},
-    timeScale: {borderColor: css("--rule-strong"), timeVisible: true, secondsVisible: false},
+    timeScale: {borderColor: css("--rule-strong"), timeVisible: true, secondsVisible: false, rightOffset: 6},
     crosshair: {mode: 0},
     localization: {locale: "ru-RU"},
   };
 }
 function candleOpts(){
-  return {upColor: css("--up"), downColor: css("--down"), wickUpColor: css("--up"), wickDownColor: css("--down"), borderVisible: false, priceLineColor: css("--ink-3"), priceFormat: {type: "price", precision: 0, minMove: 1}};
+  return {upColor: css("--up"), downColor: css("--down"), wickUpColor: css("--up"), wickDownColor: css("--down"), borderVisible: false,
+    priceLineColor: css("--ink-3"), priceFormat: {type: "price", precision: 0, minMove: 1}};
 }
 function drawLines(){
   if (!series) return;
@@ -1219,36 +1249,126 @@ function drawLines(){
   for (const t of S.targets) lines.push(series.createPriceLine({price: t.price, color: css("--tier"), lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: t.note || "цель"}));
   for (const l of D.levelSet().levels) lines.push(series.createPriceLine({price: l.value, color: css("--ink-3"), lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: l.name}));
 }
-const bar = (r) => ({time: Math.floor(r.t / 1000), open: +r.o, high: +r.h, low: +r.l, close: +r.c});
+function legend(b){
+  const el = $("lwLegend"); if (!b){ el.textContent = ""; return; }
+  const ch = b.open ? (b.close / b.open - 1) * 100 : 0;
+  el.textContent = "BTC · О " + nf0.format(b.open) + "  В " + nf0.format(b.high) + "  Н " + nf0.format(b.low) + "  З " + nf0.format(b.close) + "  " + pct(ch, 2);
+}
+function ensureChart(){
+  if (chart || !LW) return;
+  chart = LW.createChart($("lw"), chartOpts());
+  chart.applyOptions({handleScroll: {vertTouchDrag: false}});
+  series = chart.addCandlestickSeries(candleOpts());
+  series.priceScale().applyOptions({scaleMargins: {top: 0.08, bottom: 0.24}});
+  volSeries = chart.addHistogramSeries({priceFormat: {type: "volume"}, priceScaleId: "", lastValueVisible: false, priceLineVisible: false});
+  volSeries.priceScale().applyOptions({scaleMargins: {top: 0.82, bottom: 0}});
+  chart.timeScale().subscribeVisibleLogicalRangeChange((r) => { if (r && r.from < 40) loadMore(); });
+  chart.subscribeCrosshairMove((p) => {
+    const d = p && p.seriesData ? p.seriesData.get(series) : null;
+    legend(d || data[data.length - 1]);
+  });
+}
+function setAll(){ series.setData(data); volSeries.setData(vols); }
 async function loadCandles(){
   const note = $("lwNote");
   if (!LW){ note.textContent = "Библиотека графика не загрузилась, обновите страницу."; return; }
-  if (!chart){
-    chart = LW.createChart($("lw"), chartOpts());
-    series = chart.addCandlestickSeries(candleOpts());
-  }
+  ensureChart();
   for (const b of document.querySelectorAll("#tf button")) b.setAttribute("aria-pressed", String(b.dataset.tf === tf));
+  const my = ++gen; noMore = false; loadingMore = false;
   try {
     const now = Date.now();
-    const rows = await hl({type: "candleSnapshot", req: {coin: "BTC", interval: tf, startTime: now - TF[tf], endTime: now}});
-    const data = rows.map(bar).filter((b) => b.close > 0).sort((a, b) => a.time - b.time);
-    if (!data.length) throw new Error("empty");
-    series.setData(data); lastTime = data[data.length - 1].time; chartOk = true;
-    drawLines();
-    chart.timeScale().setVisibleLogicalRange({from: Math.max(0, data.length - 150), to: data.length + 6});
-    note.textContent = "Свечи бессрочного контракта BTC на Hyperliquid, время UTC. Оранжевые линии: цели на покупку, серые: рыночные уровни из утреннего отчёта.";
+    const rows = (await hl({type: "candleSnapshot", req: {coin: "BTC", interval: tf, startTime: now - PAGE * STEP[tf], endTime: now}})).sort((a, b) => a.t - b.t);
+    if (my !== gen) return;
+    if (!rows.length) throw new Error("empty");
+    data = rows.map(bar); vols = rows.map((r, i) => volBar(r, data[i])); earliest = rows[0].t;
+    setAll(); chartOk = true; drawLines(); legend(data[data.length - 1]);
+    chart.timeScale().setVisibleLogicalRange({from: Math.max(0, data.length - 140), to: data.length + 6});
+    note.textContent = "Свечи бессрочного контракта BTC на Hyperliquid, обновляются в реальном времени. Тяните график, чтобы листать историю; колесо мыши или щипок меняют масштаб, двойной щелчок по шкале цены возвращает автомасштаб. Оранжевые линии: цели на покупку, серые: рыночные уровни.";
+    wsSubscribe();
   } catch (e){
+    if (my !== gen) return;
     chartOk = false;
     note.textContent = "Свечи с Hyperliquid сейчас не загрузились. Попробуйте обновить страницу.";
   }
 }
-async function updateCandles(){
+async function loadMore(){
+  if (loadingMore || noMore || !chartOk || !data.length) return;
+  loadingMore = true; const my = gen;
+  try {
+    const end = earliest - 1;
+    const rows = (await hl({type: "candleSnapshot", req: {coin: "BTC", interval: tf, startTime: end - PAGE * STEP[tf], endTime: end}}))
+      .filter((r) => r.t < earliest).sort((a, b) => a.t - b.t);
+    if (my !== gen) return;
+    if (!rows.length){ noMore = true; return; }
+    const range = chart.timeScale().getVisibleLogicalRange();
+    const ob = rows.map(bar);
+    data = ob.concat(data); vols = rows.map((r, i) => volBar(r, ob[i])).concat(vols); earliest = rows[0].t;
+    setAll();
+    if (range) chart.timeScale().setVisibleLogicalRange({from: range.from + ob.length, to: range.to + ob.length});
+  } catch (e){} finally { if (my === gen) loadingMore = false; }
+}
+function pushBar(r){
+  if (!chartOk || !data.length) return;
+  const b = bar(r), last = data[data.length - 1];
+  if (b.time < last.time) return;
+  if (b.time === last.time){ data[data.length - 1] = b; vols[vols.length - 1] = volBar(r, b); }
+  else { data.push(b); vols.push(volBar(r, b)); }
+  series.update(b); volSeries.update(volBar(r, b));
+}
+async function refreshTail(){
   if (!chartOk || document.hidden) return;
   try {
-    const now = Date.now();
-    const rows = await hl({type: "candleSnapshot", req: {coin: "BTC", interval: tf, startTime: now - 3 * STEP[tf], endTime: now}});
-    for (const b of rows.map(bar).sort((a, b) => a.time - b.time)) if (b.time >= lastTime){ series.update(b); lastTime = b.time; }
+    const now = Date.now(), my = gen;
+    const rows = (await hl({type: "candleSnapshot", req: {coin: "BTC", interval: tf, startTime: now - 200 * STEP[tf], endTime: now}})).sort((a, b) => a.t - b.t);
+    if (my !== gen || !rows.length) return;
+    const lastRaw = (data[data.length - 1].time - shift()) * 1000;
+    if (rows[0].t > lastRaw){ loadCandles(); return; }
+    for (const r of rows) if (r.t >= lastRaw) pushBar(r);
   } catch (e){}
+}
+
+/* ---------- WebSocket: candles and market context in real time ---------- */
+let ws = null, wsTf = null, wsRetry = 0, pingTimer = 0, ctxNext = null, ctxTimer = 0;
+const wsSend = (o) => { try { ws.send(JSON.stringify(o)); } catch (e){} };
+function wsSubscribe(){
+  if (!wsOpen || wsTf === tf) return;
+  if (wsTf) wsSend({method: "unsubscribe", subscription: {type: "candle", coin: "BTC", interval: wsTf}});
+  wsSend({method: "subscribe", subscription: {type: "candle", coin: "BTC", interval: tf}});
+  wsTf = tf;
+}
+function wsConnect(){
+  if (!("WebSocket" in window)) return;
+  try { ws = new WebSocket(WSS); } catch (e){ return; }
+  ws.onopen = () => {
+    wsOpen = true; wsRetry = 0; wsTf = null;
+    wsSend({method: "subscribe", subscription: {type: "activeAssetCtx", coin: "BTC"}});
+    wsSubscribe(); refreshTail();
+    pingTimer = setInterval(() => wsSend({method: "ping"}), 30000);
+    renderLive();
+  };
+  ws.onmessage = (e) => {
+    let m; try { m = JSON.parse(e.data); } catch (x){ return; }
+    if (m.channel === "candle"){ const r = m.data; if (r && r.s === "BTC" && r.i === tf) pushBar(r); }
+    else if (m.channel === "activeAssetCtx" && m.data && m.data.ctx){
+      ctxNext = m.data.ctx;
+      if (!ctxTimer) ctxTimer = setTimeout(() => { ctxTimer = 0; applyCtx(ctxNext); }, 800);
+    }
+  };
+  ws.onclose = () => {
+    wsOpen = false; clearInterval(pingTimer); renderLive();
+    wsRetry = Math.min(wsRetry + 1, 5);
+    setTimeout(wsConnect, 1000 * Math.pow(2, wsRetry));
+  };
+  ws.onerror = () => { try { ws.close(); } catch (e){} };
+}
+
+/* ---------- expand the chart to the whole screen ---------- */
+function setExpanded(on){
+  expanded = on;
+  $("chartPanel").classList.toggle("expanded", on);
+  document.body.classList.toggle("noscroll", on);
+  $("expand").textContent = on ? "Свернуть" : "Развернуть";
+  if (chart) chart.applyOptions({handleScroll: {vertTouchDrag: on}});
 }
 
 /* ---------- vault, live ---------- */
@@ -1275,7 +1395,7 @@ async function loadVault(){
     for (const p of pos){
       const long = +p.szi > 0, pnl = +p.unrealizedPnl;
       tb.append(h("tr", null,
-        h("td", null, String(p.coin).slice(0, 20), h("span", {class: "sub", text: long ? "лонг" : "шорт"})),
+        h("td", null, String(p.coin).slice(0, 20), h("span", {class: "sub", text: (long ? "лонг" : "шорт") + ", " + (ntl > 0 ? Math.round(Math.abs(+p.positionValue) / ntl * 100) : 0) + "% позиций"})),
         h("td", {class: "r", text: usd(Math.abs(+p.positionValue))}),
         h("td", {class: "r", text: p.leverage && p.leverage.value ? p.leverage.value + "x" : "—"}),
         h("td", {class: "r", text: p.entryPx ? nf2.format(+p.entryPx) : "—"}),
@@ -1289,6 +1409,7 @@ async function loadVault(){
     for (const [t, v] of hist){ const s = Math.floor(t / 1000); if (!seen.has(s) && isFinite(+v)){ seen.add(s); pts.push({time: s, value: +v}); } }
     pts.sort((a, b) => a.time - b.time);
     if (LW && pts.length > 1){
+      $("vPnlBox").hidden = false;
       if (!pnlChart){
         pnlChart = LW.createChart($("vPnlChart"), Object.assign(chartOpts(), {handleScroll: false, handleScale: false}));
         pnlSeries = pnlChart.addBaselineSeries({baseValue: {type: "price", price: 0}, topLineColor: css("--up"), bottomLineColor: css("--down"),
@@ -1296,7 +1417,6 @@ async function loadVault(){
           priceFormat: {type: "custom", minMove: 1, formatter: (v) => usdBig(v)}});
       }
       pnlSeries.setData(pts); pnlChart.timeScale().fitContent();
-      $("vPnlBox").hidden = false;
     }
   } catch (e){
     if (!S.liveVault) $("vLive").hidden = true;
@@ -1332,6 +1452,8 @@ function initTv(){
 for (const b of document.querySelectorAll("#tf button")){
   b.addEventListener("click", () => { tf = b.dataset.tf; try { localStorage.setItem("desk.tf", tf); } catch (e){} loadCandles(); });
 }
+$("expand").addEventListener("click", () => setExpanded(!expanded));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && expanded) setExpanded(false); });
 S.onData = drawLines;
 if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   if (chart){ chart.applyOptions(chartOpts()); series.applyOptions(candleOpts()); drawLines(); }
@@ -1343,12 +1465,13 @@ if ("IntersectionObserver" in window){
   io.observe($("markets"));
 } else initTv();
 
+D.chartState = () => ({tf, bars: data.length, wsOpen, noMore, last: data[data.length - 1]});
 renderLive();
-tick(); loadCandles(); loadVault();
+tick(); loadCandles(); loadVault(); wsConnect();
 setInterval(tick, 15000);
-setInterval(updateCandles, 15000);
+setInterval(() => { if (!wsOpen) refreshTail(); }, 15000);
 setInterval(loadVault, 60000);
-document.addEventListener("visibilitychange", () => { if (!document.hidden){ tick(); updateCandles(); loadVault(); } });
+document.addEventListener("visibilitychange", () => { if (!document.hidden){ tick(); refreshTail(); loadVault(); } });
 })();
 </script>
 </body>
