@@ -261,6 +261,52 @@ body.noscroll{overflow:hidden}
   .tk{flex:initial;width:100%}
   .tk-n{white-space:normal}
 }
+
+/* wide screens: the whole width, blocks side by side */
+:root{--chart-h:420px;--tv-h:560px}
+@media (min-width:760px){:root{--chart-h:clamp(520px,64vh,960px);--tv-h:clamp(600px,72vh,1040px)}}
+.page{max-width:none}
+.lw{height:var(--chart-h)}
+.tvbox.big{height:var(--tv-h)}
+.tvbox.lw-tv{height:var(--chart-h)}
+.tvbox.cal{height:560px}
+.mk-row2{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:980px){.mk-side{max-height:calc(var(--tv-h) + 34px)}}
+@media (min-width:1100px){
+  .page{padding-left:max(24px, env(safe-area-inset-left, 0px));padding-right:max(24px, env(safe-area-inset-right, 0px))}
+  .mk-row2{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+}
+@media (min-width:1400px){
+  .page{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:28px 20px;align-items:start}
+  .page > *{grid-column:1 / -1}
+  .page > header{order:0}
+  #chart{order:1;grid-column:span 8}
+  #today{order:2;grid-column:span 4}
+  #markets{order:3}
+  #ladder{order:4}
+  #vault{order:5}
+  #history{order:6}
+  .page > footer{order:7}
+  #today #dgPanel{max-height:calc(var(--chart-h) + 118px);overflow:auto}
+  .top{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:12px 16px}
+  .top > *{grid-column:1 / -1}
+  .top > .top-line{grid-row:1}
+  .top > .hero{grid-column:1;grid-row:2}
+  .top > .tiles.q{grid-column:2;grid-row:2}
+  .top > .tiles.q .tile{display:flex;flex-direction:column;justify-content:center}
+  .top > .live-line{grid-row:3}
+  .top > .jump{grid-row:4}
+  .top > #status{grid-row:5}
+}
+@media (min-width:1700px){
+  #ladder{grid-column:span 7}
+  #vault{grid-column:span 5}
+  #ladder .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (min-width:2100px){
+  #ladder .tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+.dg > *{flex-shrink:0}
 </style>
 </head>
 <body>
@@ -290,7 +336,7 @@ body.noscroll{overflow:hidden}
       </div>
     </div>
 
-    <p class="stamp"><span class="live-dot off" id="liveDot"></span><span id="liveText">Подключаюсь к Hyperliquid…</span></p>
+    <p class="stamp live-line"><span class="live-dot off" id="liveDot"></span><span id="liveText">Подключаюсь к Hyperliquid…</span></p>
     <div class="tiles q">
       <div class="tile"><div class="lab">Фандинг, перп BTC</div><div class="tile-v" id="lFund">—</div><div class="tile-s" id="lFundS"></div></div>
       <div class="tile"><div class="lab">Открытый интерес, перп</div><div class="tile-v" id="lOi">—</div><div class="tile-s" id="lOiS"></div></div>
@@ -449,8 +495,10 @@ body.noscroll{overflow:hidden}
       <div class="panel"><div class="tvbox big" id="tvChart"><p>График TradingView загружается. Если он не появился, виджет заблокирован браузером или расширением.</p></div></div>
       <div class="panel mk-side"><div class="tk-list" id="foldItems" role="group" aria-label="Инструменты папки"></div></div>
     </div>
-    <div class="panel"><div class="tvbox" id="tvQuotes"><p>Котировки папки загружаются.</p></div></div>
-    <div class="panel"><div class="tvbox cal" id="tvCal"><p>Экономический календарь TradingView загружается.</p></div></div>
+    <div class="mk-row2">
+      <div class="panel"><div class="tvbox" id="tvQuotes"><p>Котировки папки загружаются.</p></div></div>
+      <div class="panel"><div class="tvbox cal" id="tvCal"><p>Экономический календарь TradingView загружается.</p></div></div>
+    </div>
   </section>
 
   <section class="sec" id="vault">
@@ -1532,7 +1580,7 @@ function renderFolders(){
     b.addEventListener("click", () => {
       picked[WL[fIdx].name] = it.s; try { localStorage.setItem("desk.picked", JSON.stringify(picked)); } catch (e){}
       for (const x of document.querySelectorAll("#foldItems .tk")){ const on = x.dataset.s === it.s; x.classList.toggle("on", on); x.setAttribute("aria-pressed", String(on)); }
-      if (tvDone) showChart(); else initTv();
+      if (tvDone) showChart(); else watchReady.then(initTv);
     });
     return b;
   }));
@@ -1545,7 +1593,8 @@ function showChart(){
 }
 function showQuotes(){
   const box = $("tvQuotes");
-  if (!WL.length){ box.parentNode.hidden = true; return; }
+  box.parentNode.hidden = !WL.length;
+  if (!WL.length) return;
   const f = WL[fIdx];
   box.style.height = (110 + f.items.length * 50) + "px";
   tv("tvQuotes", "embed-widget-market-quotes.js", {width: "100%", height: "100%", symbolsGroups: [{name: f.name, symbols: f.items.map((it) => ({name: it.s, displayName: it.n}))}],
@@ -1586,11 +1635,11 @@ if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEven
   tvDone = false; initTv();
   if (tvBtcDone){ tvBtcDone = false; if (!$("tvBtc").hidden) setView("tv"); }
 });
-loadWatch();
+const watchReady = loadWatch();   // widgets wait for the watchlist, or they would open with a fallback symbol
 if ("IntersectionObserver" in window){
-  const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)){ io.disconnect(); initTv(); } }, {rootMargin: "600px"});
+  const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)){ io.disconnect(); watchReady.then(initTv); } }, {rootMargin: "600px"});
   io.observe($("markets"));
-} else initTv();
+} else watchReady.then(initTv);
 
 D.chartState = () => ({tf, mkt, bars: data.length, wsOpen, noMore, first: data[0] && data[0].time, last: data[data.length - 1], range: chart ? chart.timeScale().getVisibleLogicalRange() : null});
 D.loadMore = loadMore;
