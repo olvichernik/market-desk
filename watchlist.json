@@ -20,6 +20,7 @@
   {"s":"NASDAQ:SKHY","n":"SK Hynix","l":"sk-telecom","h":"xyz:SKHX"},
   {"s":"NASDAQ:INTC","n":"Intel","l":"intel","h":"xyz:INTC"},
   {"s":"NASDAQ:SPCX","n":"SpaceX","l":"spacex","h":"xyz:SPCX"},
+  {"s":"NASDAQ:ANT","n":"Anthropic","l":"anthropic","h":"xyz:ANT"},
   {"s":"NASDAQ:AVGO","n":"Broadcom","l":"broadcom","h":"xyz:AVGO"},
   {"s":"NASDAQ:AMD","n":"AMD","l":"advanced-micro-devices","h":"xyz:AMD"},
   {"s":"NASDAQ:ASML","n":"ASML","l":"asml","h":"xyz:ASML"},
