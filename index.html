@@ -1733,18 +1733,57 @@ function initTv(){
 
 /* ---------- ETF flows: The Block embeds, plus the daily totals that come with the morning report ---------- */
 const ETF = [
-  {k: "btc", n: "BTC", flows: "spot-bitcoin-etf-flows", total: "spot-bitcoin-etf-total-net-flow", soso: "us-btc-spot", far: "btc"},
-  {k: "eth", n: "ETH", flows: "spot-ethereum-etf-flows", total: "spot-ethereum-etf-total-net-flows", soso: "us-eth-spot", far: "eth"},
-  {k: "sol", n: "SOL", flows: "spot-solana-etf-flows", total: "spot-solana-etf-total-net-flows", soso: "us-sol-spot"},
-  {k: "xrp", n: "XRP", flows: "spot-xrp-etf-flows", total: "spot-xrp-etf-total-net-flows", soso: "us-xrp-spot"},
-  {k: "hype", n: "HYPE", flows: "hype-spot-etf-flows", total: "spot-hype-etf-total-net-flows", soso: "us-hype-spot"},
+  {k: "btc", n: "BTC", flows: "spot-bitcoin-etf-flows", total: "spot-bitcoin-etf-total-net-flow", soso: "us-btc-spot", far: "btc", cur: "1673723677362319866", type: 1},
+  {k: "eth", n: "ETH", flows: "spot-ethereum-etf-flows", total: "spot-ethereum-etf-total-net-flows", soso: "us-eth-spot", far: "eth", cur: "1673723677362319867", type: 4},
+  {k: "sol", n: "SOL", flows: "spot-solana-etf-flows", total: "spot-solana-etf-total-net-flows", soso: "us-sol-spot", far: "sol", cur: "1673723677362319875", type: 0},
+  {k: "xrp", n: "XRP", flows: "spot-xrp-etf-flows", total: "spot-xrp-etf-total-net-flows", soso: "us-xrp-spot", cur: "1673723677362319871", type: 0},
+  {k: "hype", n: "HYPE", flows: "hype-spot-etf-flows", total: "spot-hype-etf-total-net-flows", soso: "us-hype-spot", far: "hyp", cur: "1862702593582522369", type: 0},
 ];
 let eIdx = 0, etfDone = false;
 try { const i = ETF.findIndex((a) => a.k === localStorage.getItem("desk.etf")); if (i > 0) eIdx = i; } catch (e){}
 const flowTxt = (m) => !m ? "$0" : (m > 0 ? "+" : "−") + "$" + (Math.abs(m) >= 1000 ? nf2.format(Math.abs(m) / 1000) + " млрд" : nf1.format(Math.abs(m)) + " млн");
 const plur = (n, a, b, c) => { const m = n % 100, k = n % 10; return m > 10 && m < 20 ? c : k === 1 ? a : k > 1 && k < 5 ? b : c; };
 const sum = (rows) => rows.reduce((t, x) => t + x.flow, 0);
+/* daily totals straight from SoSoValue: the endpoint its own ETF pages use, open to other sites; rows come oldest first */
+const SOSO = "https://gw.sosovalue.com/finance/etf-statistics-do/findPage", SOSO_PAGE = 50;
+const SO = {}, soBusy = {};
+async function sosoPage(a, pageNum){
+  const r = await fetch(SOSO, {method: "POST", headers: {"Content-Type": "application/json"}, credentials: "omit",
+    body: JSON.stringify({pageNum, pageSize: SOSO_PAGE, currencyId: a.cur, market: "US", period: "1d", type: a.type})});
+  if (!r.ok) throw new Error("soso " + r.status);
+  const j = await r.json();
+  if (!j || j.code !== 0 || !j.data || !Array.isArray(j.data.list)) throw new Error("soso shape");
+  return j.data;
+}
+const sosoRows = (pages) => {
+  const m = new Map();
+  for (const pg of pages) for (const x of pg.list){
+    const date = String(x && x.dataDate || "").slice(0, 10), v = x ? +x.totalNetInflow : NaN;
+    if (/^\d{4}-\d\d-\d\d$/.test(date) && isFinite(v) && Math.abs(v) < 1e11) m.set(date, {date, flow: v / 1e6, aum: +x.totalNetAssets > 0 ? +x.totalNetAssets : null});
+  }
+  return [...m.values()].sort((p, q) => p.date < q.date ? -1 : 1);
+};
+async function loadSoso(k, force){
+  const a = ETF.find((x) => x.k === k), c = SO[k];
+  if (!a || soBusy[k] || document.hidden || (!force && c && Date.now() - c.tried < 15 * 60e3)) return;
+  soBusy[k] = true;
+  try {
+    const first = await sosoPage(a, 1), total = +first.total || 0;
+    let rows = sosoRows([first]);
+    const lastPage = Math.ceil(total / SOSO_PAGE);
+    if (lastPage > 1){   // newest rows sit on the last page; take the one before it too when the last is nearly empty
+      const need = [lastPage]; if (total % SOSO_PAGE && total % SOSO_PAGE < 35) need.unshift(lastPage - 1);
+      const tail = sosoRows(await Promise.all(need.filter((n) => n > 1).map((n) => sosoPage(a, n))));
+      if (tail.length && (!rows.length || tail[tail.length - 1].date > rows[rows.length - 1].date)) rows = tail;   // if the order ever flips, page one already holds the newest
+    }
+    if (rows.length < 5) throw new Error("soso short");
+    SO[k] = {tried: Date.now(), at: Date.now(), rows, err: false};
+  } catch (e){ SO[k] = Object.assign({rows: null, at: 0}, SO[k], {tried: Date.now(), err: true}); }   // keep what was loaded before
+  soBusy[k] = false;
+  if (ETF[eIdx].k === k) renderEtfDays();
+}
 function etfSeries(k){
+  if (SO[k] && SO[k].rows) return SO[k].rows.slice(-30);
   const m = new Map();
   for (const d of S.digests.slice().reverse()) if (d.etf) for (const x of d.etf[k] || []) m.set(x.date, x.flow);   // a newer report overrides an older one
   return [...m].map(([date, flow]) => ({date, flow})).sort((a, b) => a.date < b.date ? -1 : 1).slice(-30);
@@ -1757,7 +1796,7 @@ function renderEtfDays(){
   if (!rows.length) return;
   const last = rows[rows.length - 1], wk = rows.slice(-5);
   $("etfDaysT").textContent = "Спотовые " + a.n + "-ETF по дням";
-  $("etfDaysS").textContent = "чистый поток всех фондов, последний день " + longDate(last.date);
+  $("etfDaysS").textContent = "чистый поток всех фондов, последний день " + longDate(last.date) + (last.aum ? " · в фондах " + big(last.aum) : "");
   setFlow("efLast", last.flow); $("efLastS").textContent = longDate(last.date);
   setFlow("efWeek", sum(wk)); $("efWeekS").textContent = wk.length < 5 ? "пока есть только " + wk.length + " " + plur(wk.length, "сессия", "сессии", "сессий") : shortDate(wk[0].date) + " – " + shortDate(last.date);
   $("efAllL").textContent = "За " + rows.length + " " + plur(rows.length, "сессию", "сессии", "сессий");
@@ -1785,8 +1824,11 @@ function renderEtfDays(){
   };
   bars.onpointerover = bars.onclick = (e) => { const c = e.target.closest ? e.target.closest(".ef-col") : null; if (c) pick(+c.dataset.i); };
   pick(rows.length - 1);
-  const src = S.digests.find((d) => d.etf && (d.etf[a.k] || []).length);
-  $("efNote").textContent = "Столбик вверх: в фонды пришли деньги, вниз: ушли. Суммы по дням приходят с утренним отчётом" + (src ? ", последний от " + longDate(src.date) + (src.etf.source ? "; источник: " + src.etf.source : "") : "") + ". Разбивка по фондам и вся история с запуска: на соседних графиках The Block.";
+  const live = SO[a.k], src = S.digests.find((d) => d.etf && (d.etf[a.k] || []).length);
+  const from = live && live.rows
+    ? "Данные SoSoValue, загружены в " + clock(live.at).slice(0, 5) + (live.err ? " (последняя попытка обновить не удалась)" : "") + ". Сумма за последний день может уточняться, пока отчитались не все фонды."
+    : (live && live.err ? "SoSoValue сейчас не отвечает, показаны суммы из утреннего отчёта" : "Загружаю данные SoSoValue, пока показаны суммы из утреннего отчёта") + (src ? " от " + longDate(src.date) : "") + ".";
+  $("efNote").textContent = "Столбик вверх: в фонды пришли деньги, вниз: ушли. " + from + " Разбивка по фондам и вся история с запуска: на соседних графиках The Block.";
 }
 function etfFrame(hostId, path, title){
   const host = $(hostId);
@@ -1810,8 +1852,9 @@ function renderEtf(){
     renderEtf(); if (etfDone) showEtf();
   }})));
   const link = (text, href) => h("a", {href, target: "_blank", rel: "noopener", text});
-  $("etfLinks").replaceChildren("Те же данные: ", link("SoSoValue", "https://sosovalue.com/ru/assets/etf/" + a.soso), ...(a.far ? [", ", link("таблица Farside", "https://farside.co.uk/" + a.far + "/")] : []));
+  $("etfLinks").replaceChildren("Суммы по дням: ", link("SoSoValue", "https://sosovalue.com/ru/assets/etf/" + a.soso), ...(a.far ? [" · по фондам: ", link("таблица Farside", "https://farside.co.uk/" + a.far + "/")] : []));
   renderEtfDays();
+  loadSoso(a.k);
 }
 function initEtf(){ if (etfDone) return; etfDone = true; showEtf(); }
 
@@ -1859,7 +1902,8 @@ if ("IntersectionObserver" in window){
 D.chartState = () => ({tf, mkt, bars: data.length, wsOpen, noMore, first: data[0] && data[0].time, last: data[data.length - 1], range: chart ? chart.timeScale().getVisibleLogicalRange() : null});
 D.loadMore = loadMore;
 D.opens = () => OPEN;
-D.etf = () => ({asset: ETF[eIdx].k, etfDone, days: etfSeries(ETF[eIdx].k).length, frames: [...document.querySelectorAll("#etf iframe")].map((f) => f.src)});
+D.etf = () => { const k = ETF[eIdx].k, c = SO[k]; return {asset: k, etfDone, days: etfSeries(k).length, live: !!(c && c.rows), err: !!(c && c.err), liveLast: c && c.rows ? c.rows[c.rows.length - 1].date : null, frames: [...document.querySelectorAll("#etf iframe")].map((f) => f.src)}; };
+D.etfReload = (k) => loadSoso(k || ETF[eIdx].k, true);
 D.watch = () => ({folders: WL.map((f) => f.name + ":" + f.items.length), fIdx, cur: WL.length ? curSym() : null, tvDone});
 renderLive();
 tick(); loadCandles(); loadVault(); wsConnect();
@@ -1869,7 +1913,8 @@ setInterval(() => { if (!wsOpen) refreshTail(); }, 15000);
 setInterval(loadVault, 60000);
 watchReady.then(pollQuotes);
 setInterval(pollQuotes, 8000);
-document.addEventListener("visibilitychange", () => { if (!document.hidden){ tick(); refreshTail(); loadVault(); pollQuotes(); } });
+setInterval(() => loadSoso(ETF[eIdx].k), 5 * 60e3);   // refetches only when the last try is older than 15 minutes
+document.addEventListener("visibilitychange", () => { if (!document.hidden){ tick(); refreshTail(); loadVault(); pollQuotes(); loadSoso(ETF[eIdx].k); } });
 })();
 </script>
 </body>
