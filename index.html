@@ -283,10 +283,11 @@ body.noscroll{overflow:hidden}
   #chart{order:1;grid-column:span 8}
   #today{order:2;grid-column:span 4}
   #markets{order:3}
-  #ladder{order:4}
-  #vault{order:5}
-  #history{order:6}
-  .page > footer{order:7}
+  #etf{order:4}
+  #ladder{order:5}
+  #vault{order:6}
+  #history{order:7}
+  .page > footer{order:8}
   #today #dgPanel{max-height:calc(var(--chart-h) + 118px);overflow:auto}
   .top{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:12px 16px}
   .top > *{grid-column:1 / -1}
@@ -311,6 +312,38 @@ body.noscroll{overflow:hidden}
 .tk-q.up{color:var(--up)} .tk-q.down{color:var(--down)}
 .mk-side .hint{margin:8px 6px 4px}
 @media (min-width:980px){.mk-grid{grid-template-columns:minmax(0,1fr) 300px}}
+
+/* ETF flows */
+:root{--etf-h:440px}
+@media (min-width:760px){:root{--etf-h:clamp(460px,50vh,620px)}}
+.etf-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:1100px){.etf-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} #etfDays{grid-column:1 / -1}}
+@media (min-width:1700px){
+  .etf-grid.has-days{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #etfDays{grid-column:auto}
+  #etfDays .tiles.q{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #etfDays .ef-bars{flex:1;min-height:230px}
+}
+.etfbox{height:var(--etf-h);position:relative}
+.etfbox > p{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;color:var(--ink-3);font-size:14px;margin:0}
+/* the embed declares no colour scheme of its own: keep the frame "light" so the browser leaves it transparent over our surface in dark mode too */
+.etfbox iframe{position:relative;z-index:1;display:block;width:100%;height:100%;border:0;border-radius:8px;background:var(--surface);color-scheme:light}
+.etf-links{margin:0;color:var(--ink-3);font-size:13px}
+.etf-links a{color:var(--accent-strong)}
+.ef-read{margin:0;font:500 14px/1.4 var(--f-mono);color:var(--ink-2);min-height:20px}
+.ef-bars{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);height:200px;padding:0 10px}
+.ef-col{display:flex;flex-direction:column;min-width:0;cursor:default}
+.ef-plot{flex:1;display:grid;min-height:0}
+.ef-half{display:flex;justify-content:center;min-height:0;padding:0 1px}
+.ef-half.up{align-items:flex-end;border-bottom:1px solid var(--rule-strong)}
+.ef-half.dn{align-items:flex-start}
+.ef-half i{display:block;width:100%;max-width:40px}
+.ef-half.up i{background:var(--up);border-radius:4px 4px 0 0}
+.ef-half.dn i{background:var(--down);border-radius:0 0 4px 4px}
+.ef-col:hover .ef-plot,.ef-col.on .ef-plot{background:var(--sunken)}
+.ef-x{height:20px;display:flex;justify-content:center;align-items:flex-end;font:400 11.5px/1 var(--f-mono);color:var(--ink-3)}
+.ef-x span{white-space:nowrap}
+@media (min-width:760px){.ef-bars{height:230px}}
 </style>
 </head>
 <body>
@@ -351,6 +384,7 @@ body.noscroll{overflow:hidden}
     <nav class="jump" aria-label="Разделы">
       <button type="button" data-go="chart">График BTC</button>
       <button type="button" data-go="markets">Рынки</button>
+      <button type="button" data-go="etf">ETF</button>
       <button type="button" data-go="today">Утренний отчёт</button>
       <button type="button" data-go="ladder">Уровни и цели</button>
       <button type="button" data-go="vault">Вольт</button>
@@ -505,6 +539,34 @@ body.noscroll{overflow:hidden}
     </div>
   </section>
 
+  <section class="sec" id="etf">
+    <div class="sec-head">
+      <h2>Потоки в крипто-ETF</h2>
+      <p class="sec-note">Спотовые ETF в США: сколько денег пришло и ушло за день</p>
+    </div>
+    <div class="chart-bar">
+      <div class="seg" id="etfAsset" role="group" aria-label="Актив"></div>
+      <p class="etf-links" id="etfLinks"></p>
+    </div>
+    <div class="etf-grid" id="etfGrid">
+    <div class="panel stack" id="etfDays" hidden>
+      <div class="sec-head"><h3 id="etfDaysT">По дням</h3><p class="sec-note" id="etfDaysS"></p></div>
+      <div class="tiles q">
+        <div class="tile"><div class="lab">Последняя сессия</div><div class="tile-v" id="efLast">—</div><div class="tile-s" id="efLastS"></div></div>
+        <div class="tile"><div class="lab">За 5 сессий</div><div class="tile-v" id="efWeek">—</div><div class="tile-s" id="efWeekS"></div></div>
+        <div class="tile"><div class="lab" id="efAllL">За все дни на графике</div><div class="tile-v" id="efAll">—</div><div class="tile-s" id="efAllS"></div></div>
+        <div class="tile"><div class="lab">Серия</div><div class="tile-v" id="efRun">—</div><div class="tile-s" id="efRunS"></div></div>
+      </div>
+      <p class="ef-read" id="efRead" aria-live="polite"></p>
+      <div class="ef-bars" id="efBars" role="group" aria-label="Чистый поток по дням"></div>
+      <p class="hint" id="efNote"></p>
+    </div>
+      <div class="panel stack"><h3 id="etfFlowsT">По фондам</h3><div class="etfbox" id="etfFlows"><p>График The Block загружается. Если он не появился, его блокирует браузер или расширение.</p></div></div>
+      <div class="panel stack"><h3 id="etfTotalT">Все фонды вместе</h3><div class="etfbox" id="etfTotal"><p>График The Block загружается. Если он не появился, его блокирует браузер или расширение.</p></div></div>
+    </div>
+    <p class="hint">Графики The Block: период переключается кнопками 1M, 3M, 12M, YTD и ALL, точные суммы видны при наведении. Данные за день появляются после закрытия торгов в США, обычно к утру по Варшаве; The Block иногда обновляется на сутки позже, чем SoSoValue и Farside.</p>
+  </section>
+
   <section class="sec" id="vault">
     <div class="sec-head">
       <h2>Вольт</h2>
@@ -582,7 +644,7 @@ body.noscroll{overflow:hidden}
   </section>
 
   <footer>
-    Цена, график, фандинг и позиции вольта приходят с Hyperliquid в реальном времени, графики рынков и календарь показывает TradingView. Утренний отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
+    Цена, график, фандинг и позиции вольта приходят с Hyperliquid в реальном времени, графики рынков и календарь показывает TradingView, потоки ETF показывает The Block. Утренний отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
   </footer>
 </div>
 
@@ -674,6 +736,16 @@ function normVault(v){
     asOf: str(v.asOf, 200), note: str(v.note, 1200),
   };
 }
+function normEtf(e){
+  if (!e || typeof e !== "object") return null;
+  const out = {asOf: str(e.asOf, 160), source: str(e.source, 160)};
+  let any = false;
+  for (const k of ["btc", "eth", "sol", "xrp", "hype"]){
+    out[k] = arr(e[k], 80).filter((x) => x && typeof x === "object" && isDate(x.date) && numv(x.flow) != null && Math.abs(x.flow) < 1e5).map((x) => ({date: x.date, flow: x.flow}));
+    if (out[k].length) any = true;
+  }
+  return any ? out : null;
+}
 function normDigest(d){
   if (!d || typeof d !== "object" || !isDate(d.date)) return null;
   return {
@@ -693,6 +765,7 @@ function normDigest(d){
       title: str(x.title, 200), url: /^https?:\/\//i.test(str(x.url, 600)) ? str(x.url, 600) : "",
     })).filter((x) => x.title || x.url),
     vault: normVault(d.vault),
+    etf: normEtf(d.etf),
   };
 }
 
@@ -1244,7 +1317,7 @@ window.addEventListener("resize", () => {
   rz = requestAnimationFrame(() => { renderMap(); renderHistory(true); });
 });
 
-window.DESK = {S, $, h, usd, usdBig, pct, nf0, nf2, btcf, levelSet, recalc, renderHero};
+window.DESK = {S, $, h, usd, usdBig, pct, nf0, nf1, nf2, btcf, levelSet, recalc, renderHero, longDate, shortDate, parseDate};
 renderAll();
 load();
 })();
@@ -1255,7 +1328,7 @@ load();
 (() => {
 "use strict";
 const D = window.DESK; if (!D) return;
-const {S, $, h, usd, usdBig, pct, nf0, nf2} = D;
+const {S, $, h, usd, usdBig, pct, nf0, nf1, nf2, longDate, shortDate} = D;
 const API = "https://api.hyperliquid.xyz/info";
 const WSS = "wss://api.hyperliquid.xyz/ws";
 const VAULT = "0x53f8f390fd4f70941c5d160a964f6893c8dbceff";
@@ -1658,6 +1731,90 @@ function initTv(){
   tv("tvCal", "embed-widget-events.js", {colorTheme: tvTheme(), isTransparent: false, width: "100%", height: "100%", locale: "ru", importanceFilter: "0,1", countryFilter: "us,eu,jp,cn,kr,gb"});
 }
 
+/* ---------- ETF flows: The Block embeds, plus the daily totals that come with the morning report ---------- */
+const ETF = [
+  {k: "btc", n: "BTC", flows: "spot-bitcoin-etf-flows", total: "spot-bitcoin-etf-total-net-flow", soso: "us-btc-spot", far: "btc"},
+  {k: "eth", n: "ETH", flows: "spot-ethereum-etf-flows", total: "spot-ethereum-etf-total-net-flows", soso: "us-eth-spot", far: "eth"},
+  {k: "sol", n: "SOL", flows: "spot-solana-etf-flows", total: "spot-solana-etf-total-net-flows", soso: "us-sol-spot"},
+  {k: "xrp", n: "XRP", flows: "spot-xrp-etf-flows", total: "spot-xrp-etf-total-net-flows", soso: "us-xrp-spot"},
+  {k: "hype", n: "HYPE", flows: "hype-spot-etf-flows", total: "spot-hype-etf-total-net-flows", soso: "us-hype-spot"},
+];
+let eIdx = 0, etfDone = false;
+try { const i = ETF.findIndex((a) => a.k === localStorage.getItem("desk.etf")); if (i > 0) eIdx = i; } catch (e){}
+const flowTxt = (m) => (m > 0 ? "+" : m < 0 ? "−" : "") + "$" + (Math.abs(m) >= 1000 ? nf2.format(Math.abs(m) / 1000) + " млрд" : nf1.format(Math.abs(m)) + " млн");
+const plur = (n, a, b, c) => { const m = n % 100, k = n % 10; return m > 10 && m < 20 ? c : k === 1 ? a : k > 1 && k < 5 ? b : c; };
+const sum = (rows) => rows.reduce((t, x) => t + x.flow, 0);
+function etfSeries(k){
+  const m = new Map();
+  for (const d of S.digests.slice().reverse()) if (d.etf) for (const x of d.etf[k] || []) m.set(x.date, x.flow);   // a newer report overrides an older one
+  return [...m].map(([date, flow]) => ({date, flow})).sort((a, b) => a.date < b.date ? -1 : 1).slice(-30);
+}
+function setFlow(id, v){ const el = $(id); el.textContent = flowTxt(v); el.classList.toggle("up", v > 0); el.classList.toggle("down", v < 0); }
+function renderEtfDays(){
+  const a = ETF[eIdx], rows = etfSeries(a.k), box = $("etfDays");
+  box.hidden = !rows.length;
+  $("etfGrid").classList.toggle("has-days", rows.length > 0);
+  if (!rows.length) return;
+  const last = rows[rows.length - 1], wk = rows.slice(-5);
+  $("etfDaysT").textContent = "Спотовые " + a.n + "-ETF по дням";
+  $("etfDaysS").textContent = "чистый поток всех фондов, последний день " + longDate(last.date);
+  setFlow("efLast", last.flow); $("efLastS").textContent = longDate(last.date);
+  setFlow("efWeek", sum(wk)); $("efWeekS").textContent = wk.length < 5 ? "пока есть только " + wk.length + " " + plur(wk.length, "сессия", "сессии", "сессий") : shortDate(wk[0].date) + " – " + shortDate(last.date);
+  $("efAllL").textContent = "За " + rows.length + " " + plur(rows.length, "сессию", "сессии", "сессий");
+  setFlow("efAll", sum(rows)); $("efAllS").textContent = "с " + shortDate(rows[0].date) + " по " + shortDate(last.date);
+  let run = 0; const sg = Math.sign(last.flow);
+  if (sg) for (let i = rows.length - 1; i >= 0 && Math.sign(rows[i].flow) === sg; i--) run++;
+  const runEl = $("efRun"); runEl.classList.toggle("up", sg > 0); runEl.classList.toggle("down", sg < 0);
+  runEl.textContent = run ? run + " " + plur(run, "день", "дня", "дней") : "—";
+  $("efRunS").textContent = run ? (sg > 0 ? "притоки" : "оттоки") + " подряд, всего " + flowTxt(sum(rows.slice(-run))) : "в последний день поток нулевой";
+
+  const maxP = Math.max(0, ...rows.map((x) => x.flow)), maxN = Math.max(0, ...rows.map((x) => -x.flow)), tot = maxP + maxN || 1;
+  const fp = Math.max(maxP, tot * 0.08), fn = Math.max(maxN, tot * 0.08);
+  const step = rows.length <= 8 ? 1 : 5;
+  const say = (x) => longDate(x.date) + ": " + flowTxt(x.flow) + (x.flow > 0 ? ", приток" : x.flow < 0 ? ", отток" : "");
+  const bars = $("efBars");
+  bars.replaceChildren(...rows.map((x, i) => h("div", {class: "ef-col", "data-i": i, title: say(x)},
+    h("div", {class: "ef-plot", style: "grid-template-rows:" + fp + "fr " + fn + "fr"},
+      h("div", {class: "ef-half up"}, x.flow > 0 ? h("i", {style: "height:max(2px," + (x.flow / fp * 100).toFixed(2) + "%)"}) : null),
+      h("div", {class: "ef-half dn"}, x.flow < 0 ? h("i", {style: "height:max(2px," + (-x.flow / fn * 100).toFixed(2) + "%)"}) : null)),
+    h("div", {class: "ef-x"}, (rows.length - 1 - i) % step === 0 ? h("span", {text: shortDate(x.date)}) : null))));
+  const pick = (i) => {
+    const x = rows[i]; if (!x) return;
+    for (const c of bars.children) c.classList.toggle("on", +c.dataset.i === i);
+    $("efRead").textContent = say(x);
+  };
+  bars.onpointerover = bars.onclick = (e) => { const c = e.target.closest ? e.target.closest(".ef-col") : null; if (c) pick(+c.dataset.i); };
+  pick(rows.length - 1);
+  const src = S.digests.find((d) => d.etf && (d.etf[a.k] || []).length);
+  $("efNote").textContent = "Столбик вверх: в фонды пришли деньги, вниз: ушли. Суммы по дням приходят с утренним отчётом" + (src ? ", последний от " + longDate(src.date) + (src.etf.source ? "; источник: " + src.etf.source : "") : "") + ". Разбивка по фондам и вся история с запуска: на соседних графиках The Block.";
+}
+function etfFrame(hostId, path, title){
+  const host = $(hostId);
+  const f = h("iframe", {src: "https://www.theblock.co/data/etfs/" + path + "/embed?theme=" + (dark() ? "dark" : "light"), title, loading: "lazy",
+    sandbox: "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads", referrerpolicy: "strict-origin-when-cross-origin"});
+  for (const old of host.querySelectorAll("iframe")) old.remove();
+  host.append(f);
+}
+function showEtf(){
+  const a = ETF[eIdx];
+  $("etfFlowsT").textContent = a.n + "-ETF по фондам: кто принёс и кто забрал";
+  $("etfTotalT").textContent = a.n + "-ETF, все фонды вместе";
+  etfFrame("etfFlows", a.flows, "Потоки спотовых " + a.n + "-ETF по фондам, The Block");
+  etfFrame("etfTotal", a.total, "Суммарный чистый поток спотовых " + a.n + "-ETF, The Block");
+}
+function renderEtf(){
+  const a = ETF[eIdx];
+  $("etfAsset").replaceChildren(...ETF.map((x, i) => h("button", {type: "button", "aria-pressed": String(i === eIdx), text: x.n, onclick: () => {
+    if (i === eIdx) return;
+    eIdx = i; try { localStorage.setItem("desk.etf", x.k); } catch (e){}
+    renderEtf(); if (etfDone) showEtf();
+  }})));
+  const link = (text, href) => h("a", {href, target: "_blank", rel: "noopener", text});
+  $("etfLinks").replaceChildren("Те же данные: ", link("SoSoValue", "https://sosovalue.com/ru/assets/etf/" + a.soso), ...(a.far ? [", ", link("таблица Farside", "https://farside.co.uk/" + a.far + "/")] : []));
+  renderEtfDays();
+}
+function initEtf(){ if (etfDone) return; etfDone = true; showEtf(); }
+
 /* ---------- wiring ---------- */
 for (const b of document.querySelectorAll("#tf button")){
   b.addEventListener("click", () => { tf = b.dataset.tf; try { localStorage.setItem("desk.tf", tf); } catch (e){} loadCandles(); });
@@ -1680,11 +1837,12 @@ function setView(v){
 for (const b of document.querySelectorAll("#mk button")) b.addEventListener("click", () => setView(b.dataset.mk));
 $("expand").addEventListener("click", () => setExpanded(!expanded));
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && expanded) setExpanded(false); });
-S.onData = drawLines;
+S.onData = () => { drawLines(); renderEtfDays(); };
 if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   if (chart){ chart.applyOptions(chartOpts()); series.applyOptions(candleOpts()); drawLines(); }
   if (pnlChart) pnlChart.applyOptions(chartOpts());
   tvDone = false; initTv();
+  if (etfDone) showEtf();
   if (tvBtcDone){ tvBtcDone = false; if (!$("tvBtc").hidden) setView("tv"); }
 });
 const watchReady = loadWatch();   // widgets wait for the watchlist, or they would open with a fallback symbol
@@ -1692,10 +1850,16 @@ if ("IntersectionObserver" in window){
   const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)){ io.disconnect(); watchReady.then(initTv); } }, {rootMargin: "600px"});
   io.observe($("markets"));
 } else watchReady.then(initTv);
+renderEtf();
+if ("IntersectionObserver" in window){
+  const io2 = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)){ io2.disconnect(); initEtf(); } }, {rootMargin: "600px"});
+  io2.observe($("etf"));
+} else initEtf();
 
 D.chartState = () => ({tf, mkt, bars: data.length, wsOpen, noMore, first: data[0] && data[0].time, last: data[data.length - 1], range: chart ? chart.timeScale().getVisibleLogicalRange() : null});
 D.loadMore = loadMore;
 D.opens = () => OPEN;
+D.etf = () => ({asset: ETF[eIdx].k, etfDone, days: etfSeries(ETF[eIdx].k).length, frames: [...document.querySelectorAll("#etf iframe")].map((f) => f.src)});
 D.watch = () => ({folders: WL.map((f) => f.name + ":" + f.items.length), fIdx, cur: WL.length ? curSym() : null, tvDone});
 renderLive();
 tick(); loadCandles(); loadVault(); wsConnect();
