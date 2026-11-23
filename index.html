@@ -1534,11 +1534,11 @@ function setView(v){
   $("lwWrap").hidden = isTv; $("tf").hidden = isTv; $("tvBtc").hidden = !isTv;
   if (!isTv){ mkt = v; try { localStorage.setItem("desk.mkt", mkt); } catch (e){} loadCandles(); return; }
   for (const b of document.querySelectorAll("#mk button")) b.setAttribute("aria-pressed", String(b.dataset.mk === "tv"));
-  $("mkNote").textContent = "TradingView, Binance BTC/USDT";
+  $("mkNote").textContent = "TradingView, спот Hyperliquid BTC/USDC";
   $("lwNote").textContent = "Виджет TradingView: индикаторы сверху, инструменты рисования слева, инструмент меняется в поиске. Цели и рыночные уровни на нём не рисуются, они есть на графике Hyperliquid (кнопки «Спот» и «Перп»).";
   if (!tvBtcDone){
     tvBtcDone = true;
-    tv("tvBtc", "embed-widget-advanced-chart.js", {autosize: true, symbol: "BINANCE:BTCUSDT", interval: "D", timezone: "Europe/Warsaw", theme: dark() ? "dark" : "light", style: "1", locale: "ru",
+    tv("tvBtc", "embed-widget-advanced-chart.js", {autosize: true, symbol: "HYPERLIQUID:BTCUSDC", interval: "D", timezone: "Europe/Warsaw", theme: dark() ? "dark" : "light", style: "1", locale: "ru",
       allow_symbol_change: true, hide_side_toolbar: false, withdateranges: true, calendar: false, support_host: "https://www.tradingview.com"});
   }
 }

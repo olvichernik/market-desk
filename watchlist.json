@@ -1,22 +1,25 @@
 {
 "folders": [
-{"name": "Альты", "items": [
-  {"s": "BINANCE:ETHUSDT", "n": "Ethereum"}, {"s": "BINANCE:SOLUSDT", "n": "Solana"}, {"s": "BYBIT:HYPEUSDT", "n": "Hyperliquid"},
-  {"s": "BINANCE:AAVEUSDT", "n": "Aave"}, {"s": "BINANCE:UNIUSDT", "n": "Uniswap"}, {"s": "BINANCE:ONDOUSDT", "n": "Ondo"}, {"s": "BINANCE:ZROUSDT", "n": "LayerZero"},
-  {"s": "BINANCE:ETHBTC", "n": "ETH/BTC"}, {"s": "CRYPTOCAP:BTC.D", "n": "Доминация BTC"}, {"s": "CRYPTOCAP:TOTAL3", "n": "Альты без BTC и ETH"}]},
 {"name": "Индексы", "items": [
-  {"s": "OANDA:SPX500USD", "n": "S&P 500"}, {"s": "OANDA:NAS100USD", "n": "Nasdaq 100"}, {"s": "OANDA:US30USD", "n": "Dow Jones"}, {"s": "CAPITALCOM:VIX", "n": "VIX"},
-  {"s": "AMEX:EWY", "n": "Корея, ETF EWY"}, {"s": "AMEX:EWT", "n": "Тайвань, ETF EWT"}, {"s": "OANDA:JP225USD", "n": "Nikkei 225"}, {"s": "OANDA:HK33HKD", "n": "Hang Seng"}, {"s": "OANDA:DE30EUR", "n": "DAX"}]},
-{"name": "Акции AI", "items": [
-  {"s": "NASDAQ:NVDA", "n": "Nvidia"}, {"s": "NYSE:TSM", "n": "TSMC"}, {"s": "NASDAQ:MU", "n": "Micron"}, {"s": "GETTEX:HY9H", "n": "SK Hynix, GDR"}, {"s": "NASDAQ:SNDK", "n": "Sandisk"},
-  {"s": "NASDAQ:INTC", "n": "Intel"}, {"s": "NASDAQ:AVGO", "n": "Broadcom"}, {"s": "NASDAQ:AMD", "n": "AMD"}, {"s": "NASDAQ:ASML", "n": "ASML"}, {"s": "NASDAQ:SMH", "n": "Чипы, ETF SMH"},
+  {"s": "OANDA:SPX500USD", "n": "S&P 500"}, {"s": "OANDA:NAS100USD", "n": "Nasdaq 100"}, {"s": "INDEX:DXY", "n": "Индекс доллара"}, {"s": "CAPITALCOM:VIX", "n": "VIX"},
+  {"s": "OKX:KR200USDT.P", "n": "KOSPI 200, перп"}, {"s": "AMEX:EWY", "n": "Корея, ETF EWY"}, {"s": "INDEX:TAIEX", "n": "TAIEX"}, {"s": "OANDA:JP225USD", "n": "Nikkei 225"},
+  {"s": "OANDA:US30USD", "n": "Dow Jones"}, {"s": "OANDA:HK33HKD", "n": "Hang Seng"}, {"s": "OANDA:DE30EUR", "n": "DAX"}]},
+{"name": "Акции", "items": [
+  {"s": "NASDAQ:NVDA", "n": "Nvidia"}, {"s": "NYSE:TSM", "n": "TSMC"}, {"s": "NASDAQ:SNDK", "n": "Sandisk"}, {"s": "NASDAQ:MU", "n": "Micron"}, {"s": "NASDAQ:SKHY", "n": "SK Hynix"},
+  {"s": "NASDAQ:INTC", "n": "Intel"}, {"s": "NASDAQ:SPCX", "n": "SpaceX"},
+  {"s": "NASDAQ:AVGO", "n": "Broadcom"}, {"s": "NASDAQ:AMD", "n": "AMD"}, {"s": "NASDAQ:ASML", "n": "ASML"}, {"s": "NASDAQ:SMH", "n": "Чипы, ETF SMH"},
   {"s": "NASDAQ:MSFT", "n": "Microsoft"}, {"s": "NASDAQ:GOOGL", "n": "Alphabet"}, {"s": "NASDAQ:META", "n": "Meta"}, {"s": "NASDAQ:AMZN", "n": "Amazon"}, {"s": "NYSE:ORCL", "n": "Oracle"}]},
 {"name": "Сырьё", "items": [
-  {"s": "OANDA:XAUUSD", "n": "Золото"}, {"s": "OANDA:XAGUSD", "n": "Серебро"}, {"s": "TVC:UKOIL", "n": "Нефть Brent"}, {"s": "TVC:USOIL", "n": "Нефть WTI"},
+  {"s": "TVC:UKOIL", "n": "Нефть Brent"}, {"s": "TVC:USOIL", "n": "Нефть WTI"}, {"s": "TVC:GOLD", "n": "Золото"}, {"s": "TVC:SILVER", "n": "Серебро"},
   {"s": "OANDA:XCUUSD", "n": "Медь"}, {"s": "OANDA:NATGASUSD", "n": "Газ"}]},
 {"name": "Валюты и ставки", "items": [
-  {"s": "CAPITALCOM:DXY", "n": "Индекс доллара"}, {"s": "FX:EURUSD", "n": "EUR/USD"}, {"s": "FX:USDJPY", "n": "USD/JPY"}, {"s": "FX_IDC:USDPLN", "n": "USD/PLN"}, {"s": "FX_IDC:USDUAH", "n": "USD/UAH"},
+  {"s": "FX:EURUSD", "n": "EUR/USD"}, {"s": "FX:USDJPY", "n": "USD/JPY"}, {"s": "FX_IDC:USDPLN", "n": "USD/PLN"}, {"s": "FX_IDC:USDUAH", "n": "USD/UAH"},
   {"s": "FRED:DGS10", "n": "US 10Y"}, {"s": "FRED:DGS2", "n": "US 2Y"}]},
+{"name": "Криптовалюты", "items": [
+  {"s": "BINANCE:BTCUSDT", "n": "Bitcoin"}, {"s": "COINBASE:ETHUSD", "n": "Ethereum"}, {"s": "BINANCE:SOLUSDT", "n": "Solana"}, {"s": "HYPERLIQUID:HYPEUSDC", "n": "Hyperliquid"},
+  {"s": "BINANCE:PUMPUSDT", "n": "Pump"}, {"s": "BINANCE:BNBUSDT", "n": "BNB"}, {"s": "BINANCE:ZECUSDT", "n": "Zcash"},
+  {"s": "BINANCE:AAVEUSDT", "n": "Aave"}, {"s": "BINANCE:UNIUSDT", "n": "Uniswap"}, {"s": "BINANCE:ONDOUSDT", "n": "Ondo"}, {"s": "BINANCE:ZROUSDT", "n": "LayerZero"},
+  {"s": "BINANCE:ETHBTC", "n": "ETH/BTC"}, {"s": "CRYPTOCAP:BTC.D", "n": "Доминация BTC"}, {"s": "CRYPTOCAP:TOTAL3", "n": "Альты без BTC и ETH"}]},
 {"name": "Крипто-акции", "items": [
   {"s": "NASDAQ:MSTR", "n": "Strategy"}, {"s": "NASDAQ:COIN", "n": "Coinbase"}, {"s": "NASDAQ:MARA", "n": "MARA"}, {"s": "NASDAQ:IBIT", "n": "ETF IBIT"}]}
 ]
