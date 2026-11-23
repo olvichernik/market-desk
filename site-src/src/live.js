@@ -447,7 +447,7 @@ async function pollQuotes(){
 const tvTheme = () => dark() ? "dark" : "light";
 function showChart(){
   tv("tvChart", "embed-widget-advanced-chart.js", {autosize: true, symbol: WL.length ? curSym() : "OANDA:NAS100USD", interval: "D", timezone: "Europe/Warsaw", theme: tvTheme(), style: "1", locale: "ru",
-    allow_symbol_change: true, hide_side_toolbar: false, withdateranges: true, calendar: false, support_host: "https://www.tradingview.com"});
+    backgroundColor: css("--surface"), gridColor: css("--rule"), allow_symbol_change: true, hide_side_toolbar: false, withdateranges: true, calendar: false, support_host: "https://www.tradingview.com"});
 }
 function showQuotes(){
   const box = $("tvQuotes");
@@ -456,12 +456,12 @@ function showQuotes(){
   const f = WL[fIdx];
   box.style.height = (110 + f.items.length * 50) + "px";
   tv("tvQuotes", "embed-widget-market-quotes.js", {width: "100%", height: "100%", symbolsGroups: [{name: f.name, symbols: f.items.map((it) => ({name: it.s, displayName: it.n}))}],
-    showSymbolLogo: true, isTransparent: false, colorTheme: tvTheme(), locale: "ru"});
+    showSymbolLogo: true, isTransparent: true, colorTheme: tvTheme(), locale: "ru"});
 }
 function initTv(){
   if (tvDone) return; tvDone = true;
   showChart(); showQuotes();
-  tv("tvCal", "embed-widget-events.js", {colorTheme: tvTheme(), isTransparent: false, width: "100%", height: "100%", locale: "ru", importanceFilter: "0,1", countryFilter: "us,eu,jp,cn,kr,gb"});
+  tv("tvCal", "embed-widget-events.js", {colorTheme: tvTheme(), isTransparent: true, width: "100%", height: "100%", locale: "ru", importanceFilter: "0,1", countryFilter: "us,eu,jp,cn,kr,gb"});
 }
 
 /* ---------- ETF flows: The Block embeds, plus the daily totals that come with the morning report ---------- */
@@ -911,7 +911,7 @@ function setView(v){
   if (!tvBtcDone){
     tvBtcDone = true;
     tv("tvBtc", "embed-widget-advanced-chart.js", {autosize: true, symbol: "HYPERLIQUID:BTCUSDC", interval: "D", timezone: "Europe/Warsaw", theme: dark() ? "dark" : "light", style: "1", locale: "ru",
-      allow_symbol_change: true, hide_side_toolbar: false, withdateranges: true, calendar: false, support_host: "https://www.tradingview.com"});
+      backgroundColor: css("--surface"), gridColor: css("--rule"), allow_symbol_change: true, hide_side_toolbar: false, withdateranges: true, calendar: false, support_host: "https://www.tradingview.com"});
   }
 }
 for (const b of document.querySelectorAll("#mk button")) b.addEventListener("click", () => setView(b.dataset.mk));

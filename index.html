@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Рыночный пульт</title>
+<title>Market Desk</title>
 <meta name="description" content="Биткойн в реальном времени: цикл и оценка, рынки, потоки ETF, ФРС, вольт DOUBLETOP и утренний отчёт.">
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#eef2f3" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0f1214" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M6 21l6-7 5 4 9-10' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#f6f8fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d131d" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffb84d'/%3E%3Cstop offset='1' stop-color='%23f26a1b'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M6.5 21.5l6-6.5 4.5 3.5 7.5-8.5' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='24.5' cy='10' r='2.7' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geologica:wght@500;600;700&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
@@ -483,12 +483,110 @@ body.noscroll .bar{visibility:hidden}
 #lvOddsNote{margin-top:-2px}
 .tbl#lvTable thead th{white-space:normal;vertical-align:bottom}
 @media (max-width:559px){.tbl#lvTable th,.tbl#lvTable td,.tbl.cy-tbl th,.tbl.cy-tbl td{padding-left:6px;padding-right:6px}}
+
+/* ================= skin: colour, background, masthead =================
+   A deep blue-black plane with a dawn glow at the top: the page is read in the morning, when Asia closes.
+   Orange is the brand colour (bitcoin's own); blue stays the colour of everything you can press. */
+:root{
+  --plane:#edf1f6; --plane-top:#f7f9fc; --surface:#ffffff; --sunken:#f0f3f8;
+  --rule:#dfe5ed; --rule-strong:#bfc9d6;
+  --brand:#f7931a;
+  --glow-warm:rgba(247,147,26,.17); --glow-cool:rgba(42,120,214,.13);
+  --card-shadow:0 1px 2px rgba(16,24,40,.04), 0 14px 32px -26px rgba(16,24,40,.22);
+  --bar-bg:rgba(247,249,252,.8);
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --plane:#0a0e15; --plane-top:#0d131d; --surface:#121822; --sunken:#1a222e;
+    --ink:#eef2f6; --ink-2:#b9c3ce; --ink-3:#8a97a6;
+    --rule:#212b38; --rule-strong:#35424f;
+    --glow-warm:rgba(247,147,26,.15); --glow-cool:rgba(57,135,229,.2);
+    --card-shadow:inset 0 1px 0 rgba(255,255,255,.035), 0 24px 48px -36px rgba(0,0,0,.9);
+    --bar-bg:rgba(11,15,23,.72);
+  }
+}
+:root[data-theme="dark"]{
+  --plane:#0a0e15; --plane-top:#0d131d; --surface:#121822; --sunken:#1a222e;
+  --ink:#eef2f6; --ink-2:#b9c3ce; --ink-3:#8a97a6;
+  --rule:#212b38; --rule-strong:#35424f;
+  --glow-warm:rgba(247,147,26,.15); --glow-cool:rgba(57,135,229,.2);
+  --card-shadow:inset 0 1px 0 rgba(255,255,255,.035), 0 24px 48px -36px rgba(0,0,0,.9);
+  --bar-bg:rgba(11,15,23,.72);
+}
+body{background-color:var(--plane);background-repeat:no-repeat;background-image:
+  radial-gradient(1100px 460px at 88% -140px, var(--glow-warm), transparent 72%),
+  radial-gradient(1000px 520px at 6% -180px, var(--glow-cool), transparent 72%),
+  linear-gradient(180deg, var(--plane-top) 0, var(--plane) 760px)}
+/* a faint light that stays with the window, so the gaps between cards are never flat black */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:
+  radial-gradient(62vw 54vh at 100% 0, var(--glow-warm), transparent 72%),
+  radial-gradient(58vw 60vh at 0 100%, var(--glow-cool), transparent 72%);opacity:.45}
+::selection{background:color-mix(in srgb, var(--accent) 34%, transparent)}
+html{scrollbar-color:var(--rule-strong) transparent}
+.scroll,.tk-list,#dgPanel{scrollbar-width:thin}
+
+/* cards: one raised level for panels, a quieter filled block for the tiles inside them */
+.panel,.hero{box-shadow:var(--card-shadow)}
+.tile{background:var(--sunken);border-color:transparent;border-radius:10px}
+.top > .tiles .tile{background:var(--surface);border-color:var(--rule);border-radius:var(--r);box-shadow:var(--card-shadow)}
+.sec.folded > .sec-head{box-shadow:var(--card-shadow)}
+.seg button,.btn,.field input,.dg-nav button,.dg-nav select{background:var(--sunken);border-color:var(--rule)}
+.seg button:hover{border-color:var(--rule-strong)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent)}
+
+/* labels in plain sentence case instead of tracked capitals */
+.lab,.tbl thead th,.map-cols{font:500 12.5px/1.3 var(--f-body);letter-spacing:0;text-transform:none;color:var(--ink-3)}
+h4{font:600 13.5px/1.3 var(--f-body);letter-spacing:0;text-transform:none;color:var(--ink-2)}
+.tbl tr.grp th{font:600 12.5px/1.3 var(--f-body);letter-spacing:0;text-transform:none;color:var(--ink-2)}
+@media (min-width:760px){h2{font-size:22px}}
+.hero-fig{font-family:var(--f-display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+
+/* the bar: a pane of glass on a wide screen, solid on a phone where the price chip rides over the links */
+.bar{background:var(--plane-top)}
+.bar-in{height:52px}
+.bar-px::before{background:linear-gradient(to right, transparent, var(--plane-top))}
+.bar-px::after{background:var(--plane-top)}
+.bar-brand{align-items:center;gap:9px;font:700 18px/1 var(--f-display);letter-spacing:-.015em}
+.mark{display:block;width:26px;height:26px;flex:none;border-radius:7px}
+@media (min-width:900px){
+  .bar{background:var(--bar-bg);-webkit-backdrop-filter:saturate(1.5) blur(14px);backdrop-filter:saturate(1.5) blur(14px)}
+  .bar-brand{display:flex}
+  .bar-px::before,.bar-px::after{display:none}
+}
+.live-dot:not(.off){animation:live-beat 2.6s ease-out infinite}
+@keyframes live-beat{0%{box-shadow:0 0 0 0 color-mix(in srgb, var(--up) 55%, transparent)}70%,100%{box-shadow:0 0 0 6px transparent}}
+
+/* masthead: the name on a phone, the one-line description on a wide screen, bitcoin's whole history behind them */
+.mast{position:relative;isolation:isolate;display:flex;align-items:center;min-height:104px}
+.mast-art{position:absolute;inset:0;z-index:-1;pointer-events:none}
+.mast-art svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;
+  -webkit-mask-image:linear-gradient(to right, transparent 0, transparent 34%, #000 74%);mask-image:linear-gradient(to right, transparent 0, transparent 34%, #000 74%)}
+.mast-text{display:flex;flex-direction:column;gap:8px;min-width:0}
+.mast h1{display:flex;align-items:center;gap:10px;font:700 23px/1.1 var(--f-display);letter-spacing:-.02em}
+.mast h1 .mark{width:30px;height:30px;border-radius:8px}
+.mast-tag{font:500 15px/1.35 var(--f-body);color:var(--ink-2);max-width:22ch;text-wrap:balance}
+.mast-lab{position:absolute;bottom:0;padding-left:7px;font:500 11px/1 var(--f-body);color:var(--ink-3);white-space:nowrap;display:none}
+.mast-now{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--brand);animation:now-beat 3.2s ease-in-out infinite}
+@keyframes now-beat{0%,100%{box-shadow:0 0 0 3px rgba(247,147,26,.3), 0 0 16px 3px rgba(247,147,26,.35)}50%{box-shadow:0 0 0 7px rgba(247,147,26,.1), 0 0 24px 7px rgba(247,147,26,.5)}}
+@media (min-width:560px){.mast-lab{display:block}}
+@media (min-width:900px){
+  .mast{min-height:140px}
+  .mast-art{left:auto;width:min(62%, 1040px)}   /* a fixed share of the width keeps the curve from being stretched flat on a wide screen */
+  .mast-art svg{-webkit-mask-image:linear-gradient(to right, transparent 0, #000 36%);mask-image:linear-gradient(to right, transparent 0, #000 36%)}
+  .mast h1{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .mast-tag{font:600 clamp(25px, 2.1vw, 34px)/1.14 var(--f-display);letter-spacing:-.02em;color:var(--ink);max-width:19ch}
+}
+.top-line h1{display:none}
+.page{padding-top:4px}
+footer{border-top-color:var(--rule)}
+@media (prefers-reduced-motion: reduce){.live-dot,.mast-now{animation:none!important}}
 </style>
 </head>
 <body>
 <div class="bar" id="bar">
   <div class="bar-in" id="barIn">
-    <a class="bar-brand" href="#top" data-go="top" title="Наверх">Рыночный пульт</a>
+    <a class="bar-brand" href="#top" data-go="top" title="Наверх"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="mk1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb84d"/><stop offset="1" stop-color="#f26a1b"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#mk1)"/><path d="M6.5 21.5l6-6.5 4.5 3.5 7.5-8.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24.5" cy="10" r="2.7" fill="#fff"/></svg><span>Market Desk</span></a>
     <nav class="bar-nav" id="nav" aria-label="Разделы">
       <a href="#top" data-go="top">Обзор</a>
       <a href="#chart" data-go="chart">График</a>
@@ -507,8 +605,14 @@ body.noscroll .bar{visibility:hidden}
 <div class="page">
 
   <header class="top" id="top">
+    <div class="mast" id="mast">
+      <div class="mast-art" id="mastArt" aria-hidden="true"></div>
+      <div class="mast-text">
+        <h1><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="mk2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb84d"/><stop offset="1" stop-color="#f26a1b"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#mk2)"/><path d="M6.5 21.5l6-6.5 4.5 3.5 7.5-8.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24.5" cy="10" r="2.7" fill="#fff"/></svg>Market Desk</h1>
+        <p class="mast-tag">Биткойн, рынки и ликвидность на одном экране</p>
+      </div>
+    </div>
     <div class="top-line">
-      <h1>Рыночный пульт</h1>
       <p class="stamp live-line"><span class="live-dot off" id="liveDot"></span><span id="liveText">Подключаюсь к Hyperliquid…</span></p>
       <p class="stamp" id="stamp">Загружаю отчёты…</p>
     </div>
@@ -2089,7 +2193,7 @@ async function pollQuotes(){
 const tvTheme = () => dark() ? "dark" : "light";
 function showChart(){
   tv("tvChart", "embed-widget-advanced-chart.js", {autosize: true, symbol: WL.length ? curSym() : "OANDA:NAS100USD", interval: "D", timezone: "Europe/Warsaw", theme: tvTheme(), style: "1", locale: "ru",
-    allow_symbol_change: true, hide_side_toolbar: false, withdateranges: true, calendar: false, support_host: "https://www.tradingview.com"});
+    backgroundColor: css("--surface"), gridColor: css("--rule"), allow_symbol_change: true, hide_side_toolbar: false, withdateranges: true, calendar: false, support_host: "https://www.tradingview.com"});
 }
 function showQuotes(){
   const box = $("tvQuotes");
@@ -2098,12 +2202,12 @@ function showQuotes(){
   const f = WL[fIdx];
   box.style.height = (110 + f.items.length * 50) + "px";
   tv("tvQuotes", "embed-widget-market-quotes.js", {width: "100%", height: "100%", symbolsGroups: [{name: f.name, symbols: f.items.map((it) => ({name: it.s, displayName: it.n}))}],
-    showSymbolLogo: true, isTransparent: false, colorTheme: tvTheme(), locale: "ru"});
+    showSymbolLogo: true, isTransparent: true, colorTheme: tvTheme(), locale: "ru"});
 }
 function initTv(){
   if (tvDone) return; tvDone = true;
   showChart(); showQuotes();
-  tv("tvCal", "embed-widget-events.js", {colorTheme: tvTheme(), isTransparent: false, width: "100%", height: "100%", locale: "ru", importanceFilter: "0,1", countryFilter: "us,eu,jp,cn,kr,gb"});
+  tv("tvCal", "embed-widget-events.js", {colorTheme: tvTheme(), isTransparent: true, width: "100%", height: "100%", locale: "ru", importanceFilter: "0,1", countryFilter: "us,eu,jp,cn,kr,gb"});
 }
 
 /* ---------- ETF flows: The Block embeds, plus the daily totals that come with the morning report ---------- */
@@ -2553,7 +2657,7 @@ function setView(v){
   if (!tvBtcDone){
     tvBtcDone = true;
     tv("tvBtc", "embed-widget-advanced-chart.js", {autosize: true, symbol: "HYPERLIQUID:BTCUSDC", interval: "D", timezone: "Europe/Warsaw", theme: dark() ? "dark" : "light", style: "1", locale: "ru",
-      allow_symbol_change: true, hide_side_toolbar: false, withdateranges: true, calendar: false, support_host: "https://www.tradingview.com"});
+      backgroundColor: css("--surface"), gridColor: css("--rule"), allow_symbol_change: true, hide_side_toolbar: false, withdateranges: true, calendar: false, support_host: "https://www.tradingview.com"});
   }
 }
 for (const b of document.querySelectorAll("#mk button")) b.addEventListener("click", () => setView(b.dataset.mk));
@@ -2750,6 +2854,44 @@ function drawCycle(){
   cyBand.setData(cyPts.map((x) => ({time: x.time, value: x.p < x.r ? 1 : 0})));   // a band wherever the price is under the realized price
   if (!cyDrawn){ cyDrawn = true; setCyRange(); }
   cycleRead(null);
+  drawRidge();
+}
+/* The masthead backdrop: the same weekly series as one line on a log scale, halvings marked, a dot where the price is now. */
+const HALVINGS = ["2012-11-28", "2016-07-09", "2020-05-11", "2024-04-20"];
+let ridgeAt = 0;
+function drawRidge(){
+  const host = $("mastArt"), src = cyPts.filter((p) => p.time >= "2014-01-01");   // the first years are a near-vertical climb that flattens everything after
+  if (!host || src.length < 50) return;
+  ridgeAt = Date.now();
+  const W = 1000, HH = 200, X1 = 968, t0 = utcMs(src[0].time), t1 = utcMs(src[src.length - 1].time);
+  const lg = src.map((p) => Math.log10(p.p)), lo = Math.min(...lg), hi = Math.max(...lg);
+  const X = (ms) => (ms - t0) / (t1 - t0) * X1, Y = (v) => HH - 22 - (v - lo) / (hi - lo) * (HH - 40);
+  const pts = src.map((p, i) => [X(utcMs(p.time)), Y(lg[i])]);
+  const line = "M" + pts.map((p) => p[0].toFixed(1) + " " + p[1].toFixed(1)).join("L");
+  let marks = "";
+  const labs = [];
+  for (const d of HALVINGS){
+    const ms = utcMs(d); if (ms <= t0 || ms >= t1) continue;
+    let k = 0; while (k < src.length - 1 && utcMs(src[k].time) < ms) k++;
+    marks += '<line x1="' + X(ms).toFixed(1) + '" x2="' + X(ms).toFixed(1) + '" y1="' + pts[k][1].toFixed(1) + '" y2="' + HH + '" vector-effect="non-scaling-stroke"/>';
+    labs.push([X(ms) / W * 100, d.slice(0, 4)]);
+  }
+  host.innerHTML = '<svg viewBox="0 0 ' + W + " " + HH + '" preserveAspectRatio="none">'
+    + '<defs><linearGradient id="rgLine" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="' + W + '" y2="0"><stop offset="0.3" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--brand)"/></linearGradient>'
+    + '<linearGradient id="rgFill" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="' + HH + '"><stop offset="0" style="stop-color:var(--brand);stop-opacity:.2"/><stop offset="1" style="stop-color:var(--brand);stop-opacity:0"/></linearGradient></defs>'
+    + '<path d="' + line + "L" + X1 + " " + HH + "L0 " + HH + 'Z" fill="url(#rgFill)"/>'
+    + '<g style="stroke:var(--rule-strong)" stroke-width="1" stroke-dasharray="2 4" fill="none">' + marks + "</g>"
+    + '<path d="' + line + '" fill="none" stroke="url(#rgLine)" stroke-width="1.7" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
+  let named = false;
+  for (const [x, y] of labs){
+    if (x < 30) continue;   // the left third is faded out behind the text
+    const el = document.createElement("span"); el.className = "mast-lab"; el.style.left = x + "%";
+    el.textContent = (named ? "" : "халвинг ") + y; named = true; host.append(el);
+  }
+  const last = pts[pts.length - 1], dot = document.createElement("span");
+  dot.className = "mast-now"; dot.style.left = last[0] / W * 100 + "%"; dot.style.top = last[1] / HH * 100 + "%";
+  host.append(dot);
+  $("mast").title = "Цена биткойна с 2014 года, логарифмическая шкала; пунктир отмечает халвинги";
 }
 function tailCycle(){   // the last point follows the live price
   if (!cyChart || !cyPts.length) return;
@@ -2761,6 +2903,7 @@ function tailCycle(){   // the last point follows the live price
   const x = cyPts[cyPts.length - 1];
   cyPx.update({time: x.time, value: x.p}); cyRp.update({time: x.time, value: x.r});
   cyBand.update({time: x.time, value: x.p < x.r ? 1 : 0});
+  if (Date.now() - ridgeAt > 5 * 60e3) drawRidge();
   if ($("cyRead").textContent.startsWith("сейчас")) cycleRead(null);
 }
 function renderCycle(){
@@ -3147,7 +3290,7 @@ function mirror(){
   $("bDot").classList.toggle("off", !L);
   chip.title = (L ? "Живая цена биткойна, спот на Hyperliquid" : "Цена из утреннего отчёта") + ". Нажмите, чтобы вернуться наверх";
   bar.classList.toggle("no-px", !ok);
-  const title = (L && ok ? t + " · " : "") + "Рыночный пульт";   // the live price is readable from a background tab
+  const title = (L && ok ? t + " · " : "") + "Market Desk";   // the live price is readable from a background tab
   if (document.title !== title) document.title = title;
 }
 new MutationObserver(mirror).observe($("hPrice").parentNode, {childList: true, subtree: true, characterData: true});

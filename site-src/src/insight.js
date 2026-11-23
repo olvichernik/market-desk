@@ -129,6 +129,44 @@ function drawCycle(){
   cyBand.setData(cyPts.map((x) => ({time: x.time, value: x.p < x.r ? 1 : 0})));   // a band wherever the price is under the realized price
   if (!cyDrawn){ cyDrawn = true; setCyRange(); }
   cycleRead(null);
+  drawRidge();
+}
+/* The masthead backdrop: the same weekly series as one line on a log scale, halvings marked, a dot where the price is now. */
+const HALVINGS = ["2012-11-28", "2016-07-09", "2020-05-11", "2024-04-20"];
+let ridgeAt = 0;
+function drawRidge(){
+  const host = $("mastArt"), src = cyPts.filter((p) => p.time >= "2014-01-01");   // the first years are a near-vertical climb that flattens everything after
+  if (!host || src.length < 50) return;
+  ridgeAt = Date.now();
+  const W = 1000, HH = 200, X1 = 968, t0 = utcMs(src[0].time), t1 = utcMs(src[src.length - 1].time);
+  const lg = src.map((p) => Math.log10(p.p)), lo = Math.min(...lg), hi = Math.max(...lg);
+  const X = (ms) => (ms - t0) / (t1 - t0) * X1, Y = (v) => HH - 22 - (v - lo) / (hi - lo) * (HH - 40);
+  const pts = src.map((p, i) => [X(utcMs(p.time)), Y(lg[i])]);
+  const line = "M" + pts.map((p) => p[0].toFixed(1) + " " + p[1].toFixed(1)).join("L");
+  let marks = "";
+  const labs = [];
+  for (const d of HALVINGS){
+    const ms = utcMs(d); if (ms <= t0 || ms >= t1) continue;
+    let k = 0; while (k < src.length - 1 && utcMs(src[k].time) < ms) k++;
+    marks += '<line x1="' + X(ms).toFixed(1) + '" x2="' + X(ms).toFixed(1) + '" y1="' + pts[k][1].toFixed(1) + '" y2="' + HH + '" vector-effect="non-scaling-stroke"/>';
+    labs.push([X(ms) / W * 100, d.slice(0, 4)]);
+  }
+  host.innerHTML = '<svg viewBox="0 0 ' + W + " " + HH + '" preserveAspectRatio="none">'
+    + '<defs><linearGradient id="rgLine" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="' + W + '" y2="0"><stop offset="0.3" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--brand)"/></linearGradient>'
+    + '<linearGradient id="rgFill" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="' + HH + '"><stop offset="0" style="stop-color:var(--brand);stop-opacity:.2"/><stop offset="1" style="stop-color:var(--brand);stop-opacity:0"/></linearGradient></defs>'
+    + '<path d="' + line + "L" + X1 + " " + HH + "L0 " + HH + 'Z" fill="url(#rgFill)"/>'
+    + '<g style="stroke:var(--rule-strong)" stroke-width="1" stroke-dasharray="2 4" fill="none">' + marks + "</g>"
+    + '<path d="' + line + '" fill="none" stroke="url(#rgLine)" stroke-width="1.7" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
+  let named = false;
+  for (const [x, y] of labs){
+    if (x < 30) continue;   // the left third is faded out behind the text
+    const el = document.createElement("span"); el.className = "mast-lab"; el.style.left = x + "%";
+    el.textContent = (named ? "" : "халвинг ") + y; named = true; host.append(el);
+  }
+  const last = pts[pts.length - 1], dot = document.createElement("span");
+  dot.className = "mast-now"; dot.style.left = last[0] / W * 100 + "%"; dot.style.top = last[1] / HH * 100 + "%";
+  host.append(dot);
+  $("mast").title = "Цена биткойна с 2014 года, логарифмическая шкала; пунктир отмечает халвинги";
 }
 function tailCycle(){   // the last point follows the live price
   if (!cyChart || !cyPts.length) return;
@@ -140,6 +178,7 @@ function tailCycle(){   // the last point follows the live price
   const x = cyPts[cyPts.length - 1];
   cyPx.update({time: x.time, value: x.p}); cyRp.update({time: x.time, value: x.r});
   cyBand.update({time: x.time, value: x.p < x.r ? 1 : 0});
+  if (Date.now() - ridgeAt > 5 * 60e3) drawRidge();
   if ($("cyRead").textContent.startsWith("сейчас")) cycleRead(null);
 }
 function renderCycle(){

@@ -273,3 +273,101 @@ body.noscroll .bar{visibility:hidden}
 #lvOddsNote{margin-top:-2px}
 .tbl#lvTable thead th{white-space:normal;vertical-align:bottom}
 @media (max-width:559px){.tbl#lvTable th,.tbl#lvTable td,.tbl.cy-tbl th,.tbl.cy-tbl td{padding-left:6px;padding-right:6px}}
+
+/* ================= skin: colour, background, masthead =================
+   A deep blue-black plane with a dawn glow at the top: the page is read in the morning, when Asia closes.
+   Orange is the brand colour (bitcoin's own); blue stays the colour of everything you can press. */
+:root{
+  --plane:#edf1f6; --plane-top:#f7f9fc; --surface:#ffffff; --sunken:#f0f3f8;
+  --rule:#dfe5ed; --rule-strong:#bfc9d6;
+  --brand:#f7931a;
+  --glow-warm:rgba(247,147,26,.17); --glow-cool:rgba(42,120,214,.13);
+  --card-shadow:0 1px 2px rgba(16,24,40,.04), 0 14px 32px -26px rgba(16,24,40,.22);
+  --bar-bg:rgba(247,249,252,.8);
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --plane:#0a0e15; --plane-top:#0d131d; --surface:#121822; --sunken:#1a222e;
+    --ink:#eef2f6; --ink-2:#b9c3ce; --ink-3:#8a97a6;
+    --rule:#212b38; --rule-strong:#35424f;
+    --glow-warm:rgba(247,147,26,.15); --glow-cool:rgba(57,135,229,.2);
+    --card-shadow:inset 0 1px 0 rgba(255,255,255,.035), 0 24px 48px -36px rgba(0,0,0,.9);
+    --bar-bg:rgba(11,15,23,.72);
+  }
+}
+:root[data-theme="dark"]{
+  --plane:#0a0e15; --plane-top:#0d131d; --surface:#121822; --sunken:#1a222e;
+  --ink:#eef2f6; --ink-2:#b9c3ce; --ink-3:#8a97a6;
+  --rule:#212b38; --rule-strong:#35424f;
+  --glow-warm:rgba(247,147,26,.15); --glow-cool:rgba(57,135,229,.2);
+  --card-shadow:inset 0 1px 0 rgba(255,255,255,.035), 0 24px 48px -36px rgba(0,0,0,.9);
+  --bar-bg:rgba(11,15,23,.72);
+}
+body{background-color:var(--plane);background-repeat:no-repeat;background-image:
+  radial-gradient(1100px 460px at 88% -140px, var(--glow-warm), transparent 72%),
+  radial-gradient(1000px 520px at 6% -180px, var(--glow-cool), transparent 72%),
+  linear-gradient(180deg, var(--plane-top) 0, var(--plane) 760px)}
+/* a faint light that stays with the window, so the gaps between cards are never flat black */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:
+  radial-gradient(62vw 54vh at 100% 0, var(--glow-warm), transparent 72%),
+  radial-gradient(58vw 60vh at 0 100%, var(--glow-cool), transparent 72%);opacity:.45}
+::selection{background:color-mix(in srgb, var(--accent) 34%, transparent)}
+html{scrollbar-color:var(--rule-strong) transparent}
+.scroll,.tk-list,#dgPanel{scrollbar-width:thin}
+
+/* cards: one raised level for panels, a quieter filled block for the tiles inside them */
+.panel,.hero{box-shadow:var(--card-shadow)}
+.tile{background:var(--sunken);border-color:transparent;border-radius:10px}
+.top > .tiles .tile{background:var(--surface);border-color:var(--rule);border-radius:var(--r);box-shadow:var(--card-shadow)}
+.sec.folded > .sec-head{box-shadow:var(--card-shadow)}
+.seg button,.btn,.field input,.dg-nav button,.dg-nav select{background:var(--sunken);border-color:var(--rule)}
+.seg button:hover{border-color:var(--rule-strong)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent)}
+
+/* labels in plain sentence case instead of tracked capitals */
+.lab,.tbl thead th,.map-cols{font:500 12.5px/1.3 var(--f-body);letter-spacing:0;text-transform:none;color:var(--ink-3)}
+h4{font:600 13.5px/1.3 var(--f-body);letter-spacing:0;text-transform:none;color:var(--ink-2)}
+.tbl tr.grp th{font:600 12.5px/1.3 var(--f-body);letter-spacing:0;text-transform:none;color:var(--ink-2)}
+@media (min-width:760px){h2{font-size:22px}}
+.hero-fig{font-family:var(--f-display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+
+/* the bar: a pane of glass on a wide screen, solid on a phone where the price chip rides over the links */
+.bar{background:var(--plane-top)}
+.bar-in{height:52px}
+.bar-px::before{background:linear-gradient(to right, transparent, var(--plane-top))}
+.bar-px::after{background:var(--plane-top)}
+.bar-brand{align-items:center;gap:9px;font:700 18px/1 var(--f-display);letter-spacing:-.015em}
+.mark{display:block;width:26px;height:26px;flex:none;border-radius:7px}
+@media (min-width:900px){
+  .bar{background:var(--bar-bg);-webkit-backdrop-filter:saturate(1.5) blur(14px);backdrop-filter:saturate(1.5) blur(14px)}
+  .bar-brand{display:flex}
+  .bar-px::before,.bar-px::after{display:none}
+}
+.live-dot:not(.off){animation:live-beat 2.6s ease-out infinite}
+@keyframes live-beat{0%{box-shadow:0 0 0 0 color-mix(in srgb, var(--up) 55%, transparent)}70%,100%{box-shadow:0 0 0 6px transparent}}
+
+/* masthead: the name on a phone, the one-line description on a wide screen, bitcoin's whole history behind them */
+.mast{position:relative;isolation:isolate;display:flex;align-items:center;min-height:104px}
+.mast-art{position:absolute;inset:0;z-index:-1;pointer-events:none}
+.mast-art svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;
+  -webkit-mask-image:linear-gradient(to right, transparent 0, transparent 34%, #000 74%);mask-image:linear-gradient(to right, transparent 0, transparent 34%, #000 74%)}
+.mast-text{display:flex;flex-direction:column;gap:8px;min-width:0}
+.mast h1{display:flex;align-items:center;gap:10px;font:700 23px/1.1 var(--f-display);letter-spacing:-.02em}
+.mast h1 .mark{width:30px;height:30px;border-radius:8px}
+.mast-tag{font:500 15px/1.35 var(--f-body);color:var(--ink-2);max-width:22ch;text-wrap:balance}
+.mast-lab{position:absolute;bottom:0;padding-left:7px;font:500 11px/1 var(--f-body);color:var(--ink-3);white-space:nowrap;display:none}
+.mast-now{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--brand);animation:now-beat 3.2s ease-in-out infinite}
+@keyframes now-beat{0%,100%{box-shadow:0 0 0 3px rgba(247,147,26,.3), 0 0 16px 3px rgba(247,147,26,.35)}50%{box-shadow:0 0 0 7px rgba(247,147,26,.1), 0 0 24px 7px rgba(247,147,26,.5)}}
+@media (min-width:560px){.mast-lab{display:block}}
+@media (min-width:900px){
+  .mast{min-height:140px}
+  .mast-art{left:auto;width:min(62%, 1040px)}   /* a fixed share of the width keeps the curve from being stretched flat on a wide screen */
+  .mast-art svg{-webkit-mask-image:linear-gradient(to right, transparent 0, #000 36%);mask-image:linear-gradient(to right, transparent 0, #000 36%)}
+  .mast h1{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .mast-tag{font:600 clamp(25px, 2.1vw, 34px)/1.14 var(--f-display);letter-spacing:-.02em;color:var(--ink);max-width:19ch}
+}
+.top-line h1{display:none}
+.page{padding-top:4px}
+footer{border-top-color:var(--rule)}
+@media (prefers-reduced-motion: reduce){.live-dot,.mast-now{animation:none!important}}

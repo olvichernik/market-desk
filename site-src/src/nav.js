@@ -103,7 +103,7 @@ function mirror(){
   $("bDot").classList.toggle("off", !L);
   chip.title = (L ? "Живая цена биткойна, спот на Hyperliquid" : "Цена из утреннего отчёта") + ". Нажмите, чтобы вернуться наверх";
   bar.classList.toggle("no-px", !ok);
-  const title = (L && ok ? t + " · " : "") + "Рыночный пульт";   // the live price is readable from a background tab
+  const title = (L && ok ? t + " · " : "") + "Market Desk";   // the live price is readable from a background tab
   if (document.title !== title) document.title = title;
 }
 new MutationObserver(mirror).observe($("hPrice").parentNode, {childList: true, subtree: true, characterData: true});

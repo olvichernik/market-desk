@@ -12,6 +12,15 @@ css += fs.readFileSync(dir + '/src/extra.css', 'utf8');
 
 // header: the live line joins the top line, live tiles go under the hero, the old jump row is replaced by the sticky bar
 rep(`  <header class="top">`, `  <header class="top" id="top">`);
+rep(`    <div class="top-line">
+      <h1>Рыночный пульт</h1>`, `    <div class="mast" id="mast">
+      <div class="mast-art" id="mastArt" aria-hidden="true"></div>
+      <div class="mast-text">
+        <h1><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="mk2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb84d"/><stop offset="1" stop-color="#f26a1b"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#mk2)"/><path d="M6.5 21.5l6-6.5 4.5 3.5 7.5-8.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24.5" cy="10" r="2.7" fill="#fff"/></svg>Market Desk</h1>
+        <p class="mast-tag">Биткойн, рынки и ликвидность на одном экране</p>
+      </div>
+    </div>
+    <div class="top-line">`);
 rep(`      <p class="stamp" id="stamp">Загружаю отчёты…</p>`, `      <p class="stamp live-line"><span class="live-dot off" id="liveDot"></span><span id="liveText">Подключаюсь к Hyperliquid…</span></p>
       <p class="stamp" id="stamp">Загружаю отчёты…</p>`);
 rep(`    <nav class="jump" aria-label="Разделы">`, `    <div class="tiles q">
@@ -26,7 +35,7 @@ rep(`    <nav class="jump" aria-label="Разделы">`, `    <div class="tiles
 
 const BAR = `<div class="bar" id="bar">
   <div class="bar-in" id="barIn">
-    <a class="bar-brand" href="#top" data-go="top" title="Наверх">Рыночный пульт</a>
+    <a class="bar-brand" href="#top" data-go="top" title="Наверх"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="mk1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb84d"/><stop offset="1" stop-color="#f26a1b"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#mk1)"/><path d="M6.5 21.5l6-6.5 4.5 3.5 7.5-8.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24.5" cy="10" r="2.7" fill="#fff"/></svg><span>Market Desk</span></a>
     <nav class="bar-nav" id="nav" aria-label="Разделы">
       <a href="#top" data-go="top">Обзор</a>
       <a href="#chart" data-go="chart">График</a>
@@ -353,12 +362,12 @@ const html = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Рыночный пульт</title>
+<title>Market Desk</title>
 <meta name="description" content="Биткойн в реальном времени: цикл и оценка, рынки, потоки ETF, ФРС, вольт DOUBLETOP и утренний отчёт.">
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#eef2f3" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0f1214" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M6 21l6-7 5 4 9-10' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#f6f8fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d131d" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffb84d'/%3E%3Cstop offset='1' stop-color='%23f26a1b'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M6.5 21.5l6-6.5 4.5 3.5 7.5-8.5' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='24.5' cy='10' r='2.7' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geologica:wght@500;600;700&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>${css}</style>
