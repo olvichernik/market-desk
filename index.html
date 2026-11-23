@@ -2554,7 +2554,7 @@ if ("IntersectionObserver" in window){
 }
 
 /* ---------- folding sections ---------- */
-const FOLD_KEY = "desk.fold";
+const FOLD_KEY = "desk.sections";   // "desk.fold" belongs to the markets block: the chosen folder
 let folded = [];
 try { const v = JSON.parse(localStorage.getItem(FOLD_KEY) || "[]"); if (Array.isArray(v)) folded = v.filter((x) => typeof x === "string"); } catch (e){}
 function showFold(sec, on){
