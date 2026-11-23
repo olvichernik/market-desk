@@ -8,6 +8,11 @@ on:
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch:
+    inputs:
+      force:
+        description: "Перечитать уровни, даже если они свежие"
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -37,6 +42,8 @@ jobs:
             done
           fi
       - name: Обновить данные
+        env:
+          FORCE_LEVELS: ${{ inputs.force }}
         run: python3 tools/feeds.py
       - name: Опубликовать в ветке data
         run: |

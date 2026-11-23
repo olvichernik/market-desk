@@ -18,6 +18,7 @@ import csv
 import datetime as dt
 import io
 import json
+import os
 import re
 import sys
 import urllib.request
@@ -148,7 +149,7 @@ def levels(now, sample=None):
         age = (now - dt.datetime.fromisoformat(str(old.get("updated")).replace("Z", "+00:00"))).total_seconds()
     except ValueError:
         age = 1e9
-    if age < 5 * 3600 and not sample:
+    if age < 5 * 3600 and not sample and os.environ.get("FORCE_LEVELS") != "true":
         print("levels.json is fresh")
         return
     have, got = {}, 0
