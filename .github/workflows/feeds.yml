@@ -1,0 +1,40 @@
+name: Обновление данных
+
+# Keeps fed.json fresh without anyone's computer: what futures price in for each Fed meeting.
+on:
+  schedule:
+    - cron: "23 5,11,17,23 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/feeds.yml"
+      - "tools/feeds.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: feeds
+  cancel-in-progress: false
+
+jobs:
+  feeds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Обновить fed.json
+        run: python3 tools/feeds.py
+      - name: Сохранить изменения
+        run: |
+          if git diff --quiet -- fed.json; then
+            echo "Изменений нет"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fed.json
+          git commit -m "Данные ФРС: $(date -u +%F)"
+          git pull --rebase origin main
+          git push origin HEAD:main
