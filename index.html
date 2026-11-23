@@ -307,6 +307,10 @@ body.noscroll{overflow:hidden}
   #ladder .tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 .dg > *{flex-shrink:0}
+.tk-q{margin-left:auto;padding-left:8px;font:500 12.5px/1 var(--f-mono);white-space:nowrap;color:var(--ink-3)}
+.tk-q.up{color:var(--up)} .tk-q.down{color:var(--down)}
+.mk-side .hint{margin:8px 6px 4px}
+@media (min-width:980px){.mk-grid{grid-template-columns:minmax(0,1fr) 300px}}
 </style>
 </head>
 <body>
@@ -493,7 +497,7 @@ body.noscroll{overflow:hidden}
     <div class="seg" id="fold" role="group" aria-label="Папки"></div>
     <div class="mk-grid">
       <div class="panel"><div class="tvbox big" id="tvChart"><p>График TradingView загружается. Если он не появился, виджет заблокирован браузером или расширением.</p></div></div>
-      <div class="panel mk-side"><div class="tk-list" id="foldItems" role="group" aria-label="Инструменты папки"></div></div>
+      <div class="panel mk-side"><div class="tk-list" id="foldItems" role="group" aria-label="Инструменты папки"></div><p class="hint" id="tkNote"></p></div>
     </div>
     <div class="mk-row2">
       <div class="panel"><div class="tvbox" id="tvQuotes"><p>Котировки папки загружаются.</p></div></div>
@@ -1553,7 +1557,7 @@ async function loadWatch(){
     const d = await (await fetch("watchlist.json", {cache: "no-store"})).json();
     WL = (Array.isArray(d.folders) ? d.folders : []).slice(0, 12).map((f) => ({
       name: String(f.name || "").slice(0, 30),
-      items: (Array.isArray(f.items) ? f.items : []).slice(0, 30).filter((it) => it && symOk(it.s)).map((it) => ({s: it.s, n: String(it.n || it.s).slice(0, 30), l: typeof it.l === "string" && /^[A-Za-z0-9\/_-]{1,60}$/.test(it.l) ? it.l : ""})),
+      items: (Array.isArray(f.items) ? f.items : []).slice(0, 30).filter((it) => it && symOk(it.s)).map((it) => ({s: it.s, n: String(it.n || it.s).slice(0, 30), l: typeof it.l === "string" && /^[A-Za-z0-9\/_-]{1,60}$/.test(it.l) ? it.l : "", h: typeof it.h === "string" && /^([a-z]{2,8}:)?[A-Za-z0-9]{1,16}$/.test(it.h) ? it.h : ""})),
     })).filter((f) => f.name && f.items.length);
     let saved = null; try { saved = localStorage.getItem("desk.fold"); } catch (e){}
     const i = WL.findIndex((f) => f.name === saved); fIdx = i < 0 ? 0 : i;
@@ -1576,7 +1580,8 @@ function renderFolders(){
       logo = img;
     }
     const b = h("button", {type: "button", class: "tk" + (it.s === cur ? " on" : ""), "aria-pressed": String(it.s === cur), title: it.s, "data-s": it.s},
-      logo, h("span", {class: "tk-t"}, h("span", {class: "tk-n", text: it.n}), h("span", {class: "tk-s", text: it.s.split(":")[1]})));
+      logo, h("span", {class: "tk-t"}, h("span", {class: "tk-n", text: it.n}), h("span", {class: "tk-s", text: it.s.split(":")[1]})),
+      h("span", {class: "tk-q", "data-h": it.h || null, text: it.h ? "…" : "—", title: it.h ? null : "На Hyperliquid такого рынка нет"}));
     b.addEventListener("click", () => {
       picked[WL[fIdx].name] = it.s; try { localStorage.setItem("desk.picked", JSON.stringify(picked)); } catch (e){}
       for (const x of document.querySelectorAll("#foldItems .tk")){ const on = x.dataset.s === it.s; x.classList.toggle("on", on); x.setAttribute("aria-pressed", String(on)); }
@@ -1585,6 +1590,28 @@ function renderFolders(){
     return b;
   }));
   $("foldItems").scrollTop = 0; $("foldItems").scrollLeft = 0;
+  paintQuotes();
+}
+/* live 24h change for the side list, from Hyperliquid perps: the main venue for crypto, the xyz venue for stocks, indices, commodities and FX */
+const Q = {};
+function paintQuotes(){
+  for (const el of document.querySelectorAll("#foldItems .tk-q[data-h]")){
+    const q = Q[el.dataset.h];
+    el.classList.remove("up", "down");
+    if (!q){ el.textContent = "…"; continue; }
+    const ch = (q.px / q.prev - 1) * 100;
+    el.textContent = (ch > 0 ? "▲ " : ch < 0 ? "▼ " : "") + pct(ch, 2);
+    el.title = "За 24 часа, перп " + el.dataset.h + " на Hyperliquid, цена " + nf2.format(q.px);
+    if (ch > 0) el.classList.add("up"); else if (ch < 0) el.classList.add("down");
+  }
+}
+async function pollQuotes(){
+  if (document.hidden || !WL.length) return;
+  const take = (res, prefix) => { const [m, c] = res; m.universe.forEach((u, i) => { const px = +(c[i].markPx || c[i].midPx), prev = +c[i].prevDayPx; if (px > 0 && prev > 0) Q[prefix && !u.name.includes(":") ? prefix + ":" + u.name : u.name] = {px, prev}; }); };
+  const jobs = [hl({type: "metaAndAssetCtxs"}).then((r) => take(r, "")), hl({type: "metaAndAssetCtxs", dex: "xyz"}).then((r) => take(r, "xyz"))];
+  await Promise.all(jobs.map((p) => p.catch(() => {})));
+  paintQuotes();
+  $("tkNote").textContent = Object.keys(Q).length ? "Проценты: изменение за 24 часа по перпам Hyperliquid, обновлено в " + clock(Date.now()) + ". Прочерк: такого рынка там нет." : "Проценты с Hyperliquid сейчас не загрузились.";
 }
 const tvTheme = () => dark() ? "dark" : "light";
 function showChart(){
@@ -1650,7 +1677,9 @@ try { if (localStorage.getItem("desk.view") === "tv") setView("tv"); } catch (e)
 setInterval(tick, 15000);
 setInterval(() => { if (!wsOpen) refreshTail(); }, 15000);
 setInterval(loadVault, 60000);
-document.addEventListener("visibilitychange", () => { if (!document.hidden){ tick(); refreshTail(); loadVault(); } });
+watchReady.then(pollQuotes);
+setInterval(pollQuotes, 6000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden){ tick(); refreshTail(); loadVault(); pollQuotes(); } });
 })();
 </script>
 </body>
