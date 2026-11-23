@@ -386,6 +386,11 @@ body.noscroll{overflow:hidden}
 #fdSched tbody tr.on td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 #fdSched td .sub{max-width:none}
 #fdNote a,#fdSchedNote a{color:var(--accent-strong)}
+
+.fd-seg{display:flex;gap:2px;height:8px;margin:6px 0 2px;max-width:420px}
+.fd-seg i{display:block;min-width:3px;flex-basis:0;border-radius:2px}
+.fd-legend{display:flex;flex-wrap:wrap;gap:4px 14px}
+.fd-tbl td .fo-dot{margin-right:7px}
 </style>
 </head>
 <body>
@@ -613,7 +618,7 @@ body.noscroll{overflow:hidden}
   <section class="sec" id="fed">
     <div class="sec-head">
       <h2>ФРС: ставка и заседания</h2>
-      <p class="sec-note" id="fedStamp">Ожидания рынка по фьючерсам на ставку</p>
+      <p class="sec-note" id="fedStamp">Вероятности с биржи прогнозов Kalshi</p>
     </div>
     <div class="fed-grid" id="fedGrid">
       <div class="panel stack" id="fedNext">
@@ -622,16 +627,13 @@ body.noscroll{overflow:hidden}
           <div class="tile"><div class="lab">Решение</div><div class="tile-v" id="fdWhen">—</div><div class="tile-s" id="fdWhenS"></div></div>
           <div class="tile"><div class="lab">Осталось</div><div class="tile-v" id="fdLeft">—</div><div class="tile-s" id="fdLeftS"></div></div>
           <div class="tile"><div class="lab">Ставка сейчас</div><div class="tile-v" id="fdCur">—</div><div class="tile-s" id="fdCurS"></div></div>
-          <div class="tile"><div class="lab">Шанс изменения ставки</div><div class="tile-v" id="fdExp">—</div><div class="tile-s" id="fdExpS"></div></div>
+          <div class="tile"><div class="lab">Рынок ждёт</div><div class="tile-v" id="fdExp">—</div><div class="tile-s" id="fdExpS"></div></div>
         </div>
-        <p class="fd-avg" id="fdAvg"></p>
-        <div class="stack" id="fdHistBox" hidden>
-          <h4>Как менялись ожидания по этому заседанию</h4>
+        <div class="stack" id="fdOddsBox" hidden>
+          <h4>Вероятности исходов</h4>
+          <p class="fd-avg" id="fdAvg"></p>
           <div class="scroll">
-            <table class="tbl fd-tbl" id="fdHist">
-              <thead><tr><th>Оценка</th><th class="r">Ставка после заседания</th><th class="r">Шанс изменения</th></tr></thead>
-              <tbody></tbody>
-            </table>
+            <table class="tbl fd-tbl" id="fdOdds"><thead></thead><tbody></tbody></table>
           </div>
         </div>
         <p class="hint" id="fdNote"></p>
@@ -650,10 +652,10 @@ body.noscroll{overflow:hidden}
         <p class="hint" id="foNote"></p>
       </div>
       <div class="panel stack" id="fedSched">
-        <div class="sec-head"><h3>График заседаний</h3><p class="sec-note">нажмите на строку, чтобы открыть ожидания по этому заседанию</p></div>
+        <div class="sec-head"><h3>График заседаний</h3><p class="sec-note fd-legend" id="fdLegend"></p></div>
         <div class="scroll">
           <table class="tbl fd-tbl" id="fdSched">
-            <thead><tr><th>Заседание и время решения</th><th class="r">Ставка после</th><th class="r">К текущей</th></tr></thead>
+            <thead><tr><th>Заседание и время решения</th><th>Что ждёт рынок</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -739,7 +741,7 @@ body.noscroll{overflow:hidden}
   </section>
 
   <footer>
-    Цена, график, фандинг и позиции вольта приходят с Hyperliquid в реальном времени, графики рынков и календарь показывает TradingView, потоки ETF приходят с SoSoValue и The Block, ожидания по ставке ФРС раз в сутки обновляются по данным RateProbability, ставки на решение ФРС идут с рынка исходов Hyperliquid. Утренний отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
+    Цена, график, фандинг и позиции вольта приходят с Hyperliquid в реальном времени, графики рынков и календарь показывает TradingView, потоки ETF приходят с SoSoValue и The Block, вероятности по заседаниям ФРС раз в час обновляются с биржи прогнозов Kalshi, текущая ставка берётся из данных ФРС (FRED), ставки на ближайшее решение идут с рынка исходов Hyperliquid. Утренний отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
   </footer>
 </div>
 
@@ -1958,14 +1960,15 @@ function renderEtf(){
 }
 function initEtf(){ if (etfDone) return; etfDone = true; showEtf(); }
 
-/* ---------- Fed: meeting calendar and what rate futures price in for each meeting.
-   fed.json is refreshed by a scheduled GitHub job (tools/feeds.py); numbers that stop updating hide themselves. ---------- */
-let FED = null, fedSel = null;
-const FED_OLD = 4 * 864e5, FED_DEAD = 10 * 864e5;   // "not updated for a while" and "hide the market numbers"
+/* ---------- Fed: meeting calendar (fed-calendar.json) and market odds for each meeting (fed.json).
+   fed.json is rebuilt every hour by a GitHub job (tools/feeds.py) from Kalshi and FRED; the site reads the job's
+   "data" branch and falls back to the daily copy next to the page. Numbers that stop updating hide themselves. ---------- */
+let FED = null, CAL = null, fedSel = null;
+const FED_OLD = 36 * 3600e3, FED_DEAD = 4 * 864e5;   // "not refreshed for a while" and "hide the odds"
+const OUTS = [{k: "up", name: "Повышение", verb: "повысят", cssVar: "--s1"}, {k: "hold", name: "Без изменений", verb: "оставят как есть", cssVar: "--s2"}, {k: "down", name: "Снижение", verb: "снизят", cssVar: "--s3"}];
 const r2 = (x) => x.toFixed(2).replace(".", ",");
 const rngTxt = (lo) => r2(lo) + "–" + r2(lo + 0.25) + "%";
 const pc1 = (v) => v == null ? "—" : nf1.format(v) + "%";
-const bpTxt = (v) => v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + nf1.format(Math.abs(v)).replace(/,0$/, "") + " б.п.";
 function nyInstant(dateStr, hour){   // the moment it is hour:00 in New York on that date
   const [y, m, d] = dateStr.split("-").map(Number);
   const t = Date.UTC(y, m - 1, d, hour + 5);
@@ -1974,6 +1977,7 @@ function nyInstant(dateStr, hour){   // the moment it is hour:00 in New York on 
 }
 const dayMonth = (t, opt) => new Date(t).toLocaleDateString("ru-RU", Object.assign({day: "numeric", month: "long"}, opt || {}));
 const isoDay = (iso) => dayMonth(D.parseDate(iso));
+const isoOf = (t) => new Date(t).toISOString().slice(0, 10);
 function meetLabel(sc){
   const a = D.parseDate(sc.start), b = D.parseDate(sc.end), y = " " + b.getFullYear();
   return a.getMonth() === b.getMonth() ? a.getDate() + "–" + dayMonth(b) + y : dayMonth(a) + " – " + dayMonth(b) + y;
@@ -1982,40 +1986,70 @@ function leftTxt(ms){
   const min = Math.max(0, Math.floor(ms / 60e3)), d = Math.floor(min / 1440), hh = Math.floor(min % 1440 / 60), mm = min % 60;
   return d >= 1 ? d + " " + plur(d, "день", "дня", "дней") + (d < 30 && hh ? " " + hh + " ч" : "") : hh ? hh + " ч " + mm + " мин" : mm + " мин";
 }
-const moveWord = (m) => m.cut ? "снижение" : "повышение";
+const isD = (v) => typeof v === "string" && /^\d{4}-\d\d-\d\d$/.test(v), numOk = (v) => typeof v === "number" && isFinite(v) ? v : null;
+const httpsUrl = (v) => typeof v === "string" && /^https:\/\/[^\s"'<>]+$/.test(v) ? v : "";
+async function getJson(url, ms){
+  const c = new AbortController(), tm = setTimeout(() => c.abort(), ms || 8000);
+  try { const r = await fetch(url, {cache: "no-store", signal: c.signal}); if (!r.ok) throw new Error("http " + r.status); return await r.json(); }
+  finally { clearTimeout(tm); }
+}
+function fedDataUrl(){   // the job's branch of this same repository, when the page is served by GitHub Pages
+  const m = /^([a-z0-9-]+)\.github\.io$/i.exec(location.hostname), repo = location.pathname.split("/")[1];
+  return m && repo ? "https://raw.githubusercontent.com/" + m[1] + "/" + repo + "/data/fed.json" : "";
+}
+function normFed(d){
+  const pct = (v) => { const x = numOk(v); return x != null && x >= 0 && x <= 100 ? x : null; };
+  const tri = (a) => Array.isArray(a) && a.length === 3 && a.every((x) => pct(x) != null) ? a : null;
+  return {
+    updated: Date.parse(d.updated) || 0, oddsAt: Date.parse(d.oddsAt) || 0, source: typeof d.source === "string" ? d.source.slice(0, 40) : "", url: httpsUrl(d.sourceUrl),
+    cur: Array.isArray(d.band) ? numOk(d.band[0]) : null, bandAsOf: isD(d.bandAsOf) ? d.bandAsOf : "",
+    last: d.last && isD(d.last.date) ? {date: d.last.date, move: numOk(d.last.move)} : null,
+    meetings: (Array.isArray(d.meetings) ? d.meetings : []).slice(0, 30).filter((m) => m && isD(m.date) && pct(m.up) != null && pct(m.hold) != null && pct(m.down) != null)
+      .map((m) => ({date: m.date, up: m.up, hold: m.hold, down: m.down, up25: pct(m.up25), down25: pct(m.down25), p1: tri(m.p1)})),
+    hist: (Array.isArray(d.hist) ? d.hist : []).slice(-60).filter((x) => x && isD(x.d) && x.m && typeof x.m === "object"),
+  };
+}
 async function loadFed(){
   try {
-    const d = await (await fetch("fed.json", {cache: "no-store"})).json();
-    const isD = (v) => typeof v === "string" && /^\d{4}-\d\d-\d\d$/.test(v), n = (v) => typeof v === "number" && isFinite(v) ? v : null;
-    const url = (v) => typeof v === "string" && /^https:\/\/[^\s"'<>]+$/.test(v) ? v : "";
-    const meets = (list) => (Array.isArray(list) ? list : []).slice(0, 30).filter((m) => m && isD(m.date) && n(m.rate) != null && m.rate >= 0 && m.rate < 20)
-      .map((m) => ({date: m.date, rate: m.rate, bps: n(m.bps), prob: n(m.prob), cut: m.cut === true, moves: n(m.moves)}));
-    FED = {
-      updated: Date.parse(d.updated) || 0, asOf: isD(d.asOf) ? d.asOf : "", source: typeof d.source === "string" ? d.source.slice(0, 60) : "", url: url(d.sourceUrl), calUrl: url(d.scheduleSource),
-      cur: Array.isArray(d.band) ? n(d.band[0]) : null, effr: n(d.effr),
-      last: d.last && isD(d.last.date) && n(d.last.move) != null ? {date: d.last.date, move: d.last.move} : null,
-      meetings: meets(d.meetings),
-      ago: (Array.isArray(d.ago) ? d.ago : []).slice(0, 6).filter((a) => a && isD(a.date)).map((a) => ({date: a.date, meetings: meets(a.meetings)})),
-      schedule: (Array.isArray(d.schedule) ? d.schedule : []).slice(0, 40).filter((x) => x && isD(x.start) && isD(x.end))
-        .map((x) => ({start: x.start, end: x.end, sep: x.sep === true, noDecision: x.noDecision === true, at: nyInstant(x.end, 14)})).sort((a, b) => a.at - b.at),
-    };
-  } catch (e){ FED = null; }
+    const c = await getJson("fed-calendar.json");
+    CAL = {calUrl: httpsUrl(c.scheduleSource), schedule: (Array.isArray(c.schedule) ? c.schedule : []).slice(0, 60).filter((x) => x && isD(x.start) && isD(x.end))
+      .map((x) => ({start: x.start, end: x.end, sep: x.sep === true, noDecision: x.noDecision === true, at: nyInstant(x.end, 14)})).sort((a, b) => a.at - b.at)};
+  } catch (e){ if (!CAL) CAL = {calUrl: "", schedule: []}; }
+  let got = null;
+  for (const u of [fedDataUrl(), "fed.json"]){
+    if (!u) continue;
+    try { const f = normFed(await getJson(u, 6000)); if (!got || f.updated > got.updated) got = f; if (Date.now() - f.updated < 3 * 3600e3) break; } catch (e){}
+  }
+  if (got) FED = got;
   renderFed(); renderOdds();
 }
+function fedSchedule(){   // the published calendar, continued by meetings the odds market already lists beyond it
+  const sc = CAL ? CAL.schedule.slice() : [], lastEnd = sc.length ? sc[sc.length - 1].end : "";
+  if (FED) for (const m of FED.meetings) if (m.date > lastEnd){ const e = D.parseDate(m.date); e.setDate(e.getDate() - 1);
+    sc.push({start: e.getFullYear() + "-" + String(e.getMonth() + 1).padStart(2, "0") + "-" + String(e.getDate()).padStart(2, "0"), end: m.date, sep: false, noDecision: false, at: nyInstant(m.date, 14)}); }
+  return sc;
+}
+function weekAgo(date){
+  if (!FED) return null;
+  const cut = isoOf(Date.now() - 7 * 864e5);
+  let v = null;
+  for (const x of FED.hist) if (x.d <= cut && Array.isArray(x.m[date]) && x.m[date].length === 3) v = x.m[date];
+  return v;
+}
 function renderFed(){
-  const grid = $("fedGrid"), now = Date.now();
-  const up = FED ? FED.schedule.filter((x) => x.at > now) : [];
+  const now = Date.now(), all = fedSchedule(), up = all.filter((x) => x.at > now);
   $("fedNext").hidden = $("fedSched").hidden = !up.length;
-  if (!up.length){ $("fedStamp").textContent = FED ? "В календаре нет будущих заседаний" : "Календарь ФРС не загрузился"; return; }
-  const age = FED.updated ? now - FED.updated : Infinity, fresh = age < FED_DEAD;
-  // a decision announced after the last refresh may have moved the rate: do not show the old band as current
-  const curOk = FED.cur != null && !FED.schedule.some((x) => !x.noDecision && x.at > FED.updated && x.at <= now);
+  if (!up.length){ $("fedStamp").textContent = CAL ? "В календаре нет будущих заседаний" : "Календарь ФРС не загрузился"; return; }
+  const age = FED && FED.oddsAt ? now - FED.oddsAt : Infinity, fresh = age < FED_DEAD;
+  // after a decision the new range reaches the data a day later: until then the old one is not shown as current
+  const curOk = !!FED && FED.cur != null && now - FED.updated < 10 * 864e5 && !all.some((x) => !x.noDecision && x.at <= now && x.end >= FED.bandAsOf);
   const byDate = fresh ? new Map(FED.meetings.map((m) => [m.date, m])) : new Map();
   const dataOf = (sc) => sc.noDecision ? null : byDate.get(sc.end) || null;
   if (!up.some((x) => x.end === fedSel && (dataOf(x) || x === up[0]))) fedSel = up[0].end;
   const sel = up.find((x) => x.end === fedSel), m = dataOf(sel);
-  $("fedStamp").textContent = !fresh ? "оценки рынка перестали обновляться и скрыты, календарь заседаний действует"
-    : "ожидания рынка по фьючерсам на ставку, данные на " + (FED.asOf ? isoDay(FED.asOf) : dayMonth(FED.updated)) + (age > FED_OLD ? " (давно не обновлялись)" : "");
+  const stampTxt = fresh ? new Date(FED.oddsAt).toLocaleString("ru-RU", {day: "numeric", month: "long", hour: "2-digit", minute: "2-digit"}) : "";
+  $("fedStamp").textContent = fresh ? "вероятности с биржи прогнозов Kalshi, обновлено " + stampTxt + (age > FED_OLD ? " (давно не обновлялись)" : "")
+    : "вероятности перестали обновляться и скрыты, календарь заседаний работает";
 
   $("fedNextT").textContent = (sel === up[0] ? "Ближайшее заседание: " : "Заседание ") + meetLabel(sel);
   $("fedNextS").textContent = sel.noDecision ? "стратегическое, без решения по ставке" : sel.sep ? "с новыми прогнозами ФРС" : "";
@@ -2024,36 +2058,38 @@ function renderFed(){
   $("fdLeft").textContent = leftTxt(sel.at - now);
   $("fdLeftS").textContent = sel.noDecision ? "до конца заседания" : "до объявления решения";
   $("fdCur").textContent = curOk ? rngTxt(FED.cur) : "—";
-  $("fdCurS").textContent = !curOk ? "после заседания данные ещё не обновились"
-    : [FED.last ? isoDay(FED.last.date) + " " + (FED.last.move === 0 ? "оставили без изменений" : (FED.last.move > 0 ? "повысили на " : "снизили на ") + Math.abs(FED.last.move) + " б.п.") : null,
-       FED.effr != null ? "фактическая ставка EFFR " + r2(FED.effr) + "%" : null].filter(Boolean).join("; ");
-  const w1 = m && FED.ago[0] ? FED.ago[0].meetings.find((x) => x.date === m.date) : null;
-  $("fdExp").textContent = m && m.prob != null ? pc1(m.prob) : "—";
-  $("fdExpS").textContent = m && m.prob != null ? "за " + moveWord(m) + " на 25 б.п. именно на этом заседании" + (w1 && w1.prob != null ? "; неделю назад " + pc1(w1.prob) + (w1.cut !== m.cut ? " за " + moveWord(w1) : "") : "")
-    : sel.noDecision ? "решения по ставке не будет" : fresh ? "по этому заседанию оценок пока нет" : "оценки скрыты: данные устарели";
-
-  $("fdAvg").textContent = m ? "После этого заседания рынок закладывает ставку " + r2(m.rate) + "%" + (m.bps != null ? ": " + (Math.abs(m.bps) < 0.5 ? "как сейчас" : "на " + nf1.format(Math.abs(m.bps)).replace(/,0$/, "") + " б.п. " + (m.bps > 0 ? "выше" : "ниже") + " текущей" + (m.moves != null ? ", это " + nf1.format(m.moves).replace(/,0$/, "") + " шага по 25 б.п." : "")) : "") + "" : "";
-  const hist = m ? [{label: "Сейчас", date: FED.asOf, m}].concat(FED.ago.map((a, i) => ({label: ["Неделю назад", "3 недели назад", "6 недель назад", "10 недель назад"][i] || "Раньше", date: a.date, m: a.meetings.find((x) => x.date === m.date)})).filter((x) => x.m)) : [];
-  $("fdHistBox").hidden = hist.length < 2;
-  $("fdHist").tBodies[0].replaceChildren(...hist.map((x, i) => h("tr", {class: i ? null : "fd-top"},
-    h("td", null, x.label, x.date ? h("span", {class: "sub", text: isoDay(x.date)}) : null),
-    h("td", {class: "r"}, h("b", {text: r2(x.m.rate) + "%"})),
-    h("td", {class: "r"}, x.m.prob != null ? pc1(x.m.prob) : "—", x.m.prob != null ? h("span", {class: "sub", text: "за " + moveWord(x.m)}) : null))));
+  $("fdCurS").textContent = !curOk ? (FED && FED.cur != null ? "после решения новая ставка попадает в данные на следующий день" : "данные о ставке не загрузились")
+    : FED.last ? isoDay(FED.last.date) + " " + (FED.last.move == null ? "было заседание" : FED.last.move === 0 ? "оставили без изменений" : (FED.last.move > 0 ? "повысили на " : "снизили на ") + Math.abs(FED.last.move) + " б.п.") : "целевой диапазон ФРС";
+  const top = m ? OUTS.reduce((a, b) => m[b.k] > m[a.k] ? b : a) : null, ti = top ? OUTS.indexOf(top) : -1, wk = m ? weekAgo(m.date) : null;
+  const split = (o) => o.k === "up" && m.up25 != null ? "на 25 б.п. " + pc1(m.up25) + ", сильнее " + pc1(Math.max(0, m.up - m.up25))
+    : o.k === "down" && m.down25 != null ? "на 25 б.п. " + pc1(m.down25) + ", сильнее " + pc1(Math.max(0, m.down - m.down25)) : "";
+  $("fdExp").textContent = top ? pc1(m[top.k]) : "—";
+  $("fdExpS").textContent = top ? "что ставку " + top.verb + (split(top) ? ": " + split(top) : "") + (m.p1 ? ". Сутки назад " + pc1(m.p1[ti]) : "")
+    : sel.noDecision ? "решения по ставке не будет" : fresh ? "по этому заседанию ставок пока нет" : "вероятности скрыты: данные устарели";
+  $("fdAvg").textContent = m && sel !== up[0] ? "Это шансы решения на самом этом заседании, а не того, какой ставка будет к этой дате." : "";
+  $("fdOddsBox").hidden = !m;
+  if (m){
+    $("fdOdds").tHead.replaceChildren(h("tr", null, h("th", {text: "Исход"}), h("th", {class: "r", text: "Сейчас"}), m.p1 ? h("th", {class: "r", text: "Сутки назад"}) : null, wk ? h("th", {class: "r", text: "Неделю назад"}) : null));
+    $("fdOdds").tBodies[0].replaceChildren(...OUTS.map((o, i) => h("tr", {class: o === top ? "fd-top" : null},
+      h("td", null, h("i", {class: "fo-dot", style: "background:var(" + o.cssVar + ")"}), o.name, split(o) ? h("span", {class: "sub", text: split(o)}) : null,
+        h("div", {class: "fd-bar"}, m[o.k] ? h("i", {style: "width:" + Math.min(100, m[o.k]).toFixed(1) + "%;background:var(" + o.cssVar + ")"}) : null)),
+      h("td", {class: "r"}, h("b", {text: pc1(m[o.k])})), m.p1 ? h("td", {class: "r", text: pc1(m.p1[i])}) : null, wk ? h("td", {class: "r", text: pc1(wk[i])}) : null)));
+  }
   const link = (text, href) => href ? h("a", {href, target: "_blank", rel: "noopener", text}) : text;
-  $("fdNote").replaceChildren(...(fresh ? ["Оценки посчитаны по ценам фьючерсов на ставку ФРС, тем же способом, что CME FedWatch: это то, что закладывает рынок, а не прогноз самой ФРС. Источник: ", link(FED.source || "RateProbability", FED.url), ", обновляется раз в сутки."]
-    : ["Оценки рынка не обновлялись больше 10 дней, поэтому скрыты. Календарь и обратный отсчёт продолжают работать."]));
+  $("fdNote").replaceChildren(...(fresh ? ["Вероятности: цены контрактов на бирже прогнозов ", link("Kalshi", FED.url), ", где торгуют исходом каждого заседания. Обновляются раз в час сами. По дальним заседаниям торгов мало, там оценки грубее."]
+    : ["Вероятности не обновлялись больше четырёх дней, поэтому скрыты. Календарь и обратный отсчёт продолжают работать."]));
 
+  $("fdLegend").replaceChildren(...OUTS.map((o) => h("span", null, h("i", {class: "fo-dot", style: "background:var(" + o.cssVar + ")"}), o.name.toLowerCase())));
   $("fdSched").tBodies[0].replaceChildren(...up.map((sc) => {
-    const mm = dataOf(sc), pick = !!mm || sc === up[0];
+    const mm = dataOf(sc), pick = !!mm || sc === up[0], t2 = mm ? OUTS.reduce((a, b) => mm[b.k] > mm[a.k] ? b : a) : null;
     const when = new Date(sc.at).toLocaleString("ru-RU", {weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"});
-    const wk = mm && FED.ago[0] ? FED.ago[0].meetings.find((x) => x.date === mm.date) : null;
     const tr = h("tr", {class: (pick ? "pick" : "") + (sc.end === fedSel ? " on" : ""), tabindex: pick ? 0 : null, "aria-selected": pick ? String(sc.end === fedSel) : null},
       h("td", null, meetLabel(sc), sc.sep ? h("span", {class: "pill", title: "К этому заседанию ФРС публикует новые прогнозы по ставке, инфляции и экономике", text: "прогнозы"}) : null,
         h("span", {class: "sub", text: sc.noDecision ? "стратегическое заседание, через " + leftTxt(sc.at - now) : when + " · через " + leftTxt(sc.at - now)})),
-      sc.noDecision ? h("td", {colspan: 2, text: "Решения по ставке не будет"}) : null,
-      ...(sc.noDecision ? [] : [
-        h("td", {class: "r"}, mm ? r2(mm.rate) + "%" : "—", wk ? h("span", {class: "sub", text: "неделю назад " + r2(wk.rate) + "%"}) : null),
-        h("td", {class: "r"}, mm ? bpTxt(mm.bps) : "—", mm && mm.prob != null ? h("span", {class: "sub", text: "шаг на заседании: " + pc1(mm.prob)}) : null)]));
+      h("td", null, ...(sc.noDecision ? ["Решения по ставке не будет"] : !mm ? [fresh ? "ставок пока нет" : "—"] : [
+        t2.name + " · " + pc1(mm[t2.k]),
+        h("div", {class: "fd-seg", role: "img", "aria-label": OUTS.map((o) => o.name.toLowerCase() + " " + pc1(mm[o.k])).join(", ")}, ...OUTS.map((o) => mm[o.k] >= 0.5 ? h("i", {style: "flex-grow:" + mm[o.k].toFixed(1) + ";background:var(" + o.cssVar + ")"}) : null)),
+        h("span", {class: "sub", text: OUTS.filter((o) => o !== t2).map((o) => o.name.toLowerCase() + " " + pc1(mm[o.k])).join(" · ")})])));
     if (pick){
       const go = () => { fedSel = sc.end; renderFed(); };
       tr.addEventListener("click", go);
@@ -2061,7 +2097,7 @@ function renderFed(){
     }
     return tr;
   }));
-  $("fdSchedNote").replaceChildren("Даты: ", link("календарь ФРС", FED.calUrl), ". Решение объявляют во второй день в 14:00 по Нью-Йорку, время в таблице местное, даты 2027 года предварительные. «Ставка после»: уровень, который рынок закладывает после заседания; «к текущей»: насколько он выше или ниже нынешней ставки.");
+  $("fdSchedNote").replaceChildren("Даты: ", link("календарь ФРС", CAL ? CAL.calUrl : ""), ". Решение объявляют во второй день в 14:00 по Нью-Йорку, время в таблице местное, даты 2027 года предварительные.");
 }
 
 /* ---------- Fed decision odds: Hyperliquid outcome markets, where the "Yes" price of an outcome is its probability ---------- */
@@ -2149,14 +2185,10 @@ function pushOddsTail(){   // the line ends at the current mid price
     sr.update({time: t, value: v});
   }
 }
-function futOdds(at){   // the same three outcomes as futures price them, for the nearest meeting only
-  if (!FED || Date.now() - FED.updated > FED_DEAD) return null;
-  const next = FED.schedule.find((x) => x.at > Date.now());
-  if (!next || next.noDecision || Math.abs(next.at - at) > 12 * 3600e3) return null;
-  const m = FED.meetings.find((x) => x.date === next.end);
-  if (!m || m.prob == null) return null;
-  const p = Math.min(100, Math.max(0, m.prob));
-  return {up: m.cut ? 0 : p, hold: 100 - p, down: m.cut ? p : 0};
+function futOdds(at){   // the same three outcomes on Kalshi, for comparison
+  if (!FED || Date.now() - FED.oddsAt > FED_DEAD) return null;
+  const sc = fedSchedule().find((x) => !x.noDecision && Math.abs(x.at - at) < 12 * 3600e3), m = sc ? FED.meetings.find((x) => x.date === sc.end) : null;
+  return m ? {up: m.up, hold: m.hold, down: m.down} : null;
 }
 function renderOdds(){
   $("fedOdds").hidden = !FO; $("fedGrid").classList.toggle("has-odds", !!FO);
@@ -2167,7 +2199,7 @@ function renderOdds(){
   $("foTiles").replaceChildren(...FO.legs.map((l) => h("div", {class: "tile"},
     h("div", {class: "lab"}, h("i", {class: "fo-dot", style: "background:var(" + l.cssVar + ")"}), l.name),
     h("div", {class: "tile-v", text: pc1(foMids ? foMids[l.k] : null)}),
-    h("div", {class: "tile-s", text: [foDayAgo[l.k] != null ? "сутки назад " + pc1(foDayAgo[l.k]) : null, fut ? "по фьючерсам " + pc1(fut[l.k]) : null].filter(Boolean).join(" · ")}))));
+    h("div", {class: "tile-s", text: [foDayAgo[l.k] != null ? "сутки назад " + pc1(foDayAgo[l.k]) : null, fut ? "на Kalshi " + pc1(fut[l.k]) : null].filter(Boolean).join(" · ")}))));
   for (const b of document.querySelectorAll("#foRange button")) b.setAttribute("aria-pressed", String(b.dataset.r === foRange));
   $("foNote").textContent = "Участники рынка исходов на Hyperliquid ставят деньги на то, что ФРС сделает со ставкой " + when + ". Цена контракта «да» по исходу и есть его вероятность, график показывает, как она менялась. Три исхода торгуются отдельно, поэтому в сумме бывает не ровно 100%.";
 }
@@ -2219,7 +2251,7 @@ D.loadMore = loadMore;
 D.opens = () => OPEN;
 D.etf = () => { const k = ETF[eIdx].k, c = SO[k]; return {asset: k, etfDone, days: etfSeries(k).length, live: !!(c && c.rows), err: !!(c && c.err), liveLast: c && c.rows ? c.rows[c.rows.length - 1].date : null, frames: [...document.querySelectorAll("#etf iframe")].map((f) => f.src)}; };
 D.etfReload = (k) => loadSoso(k || ETF[eIdx].k, true);
-D.fed = () => FED && {sel: fedSel, cur: FED.cur, meetings: FED.meetings.length, ago: FED.ago.length, schedule: FED.schedule.length, updated: FED.updated, asOf: FED.asOf};
+D.fed = () => ({sel: fedSel, cal: CAL ? CAL.schedule.length : null, fed: FED && {cur: FED.cur, bandAsOf: FED.bandAsOf, last: FED.last, meetings: FED.meetings.length, hist: FED.hist.length, updated: FED.updated, oddsAt: FED.oddsAt}, dataUrl: fedDataUrl()});
 D.odds = () => FO && {key: FO.key, at: FO.at, mids: foMids, dayAgo: foDayAgo, range: foRange, pts: Object.fromEntries(Object.entries(foHist).map(([k, v]) => [k, v.length])), series: Object.keys(foSeries).length};
 D.watch = () => ({folders: WL.map((f) => f.name + ":" + f.items.length), fIdx, cur: WL.length ? curSym() : null, tvDone});
 renderLive();

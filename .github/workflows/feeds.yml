@@ -1,15 +1,18 @@
 name: Обновление данных
 
-# Keeps fed.json fresh without anyone's computer: what futures price in for each Fed meeting.
+# Keeps the Fed block fresh without anyone's computer: odds for each meeting (Kalshi) and the
+# current target range (FRED). The hourly result goes to the "data" branch, which the site reads;
+# a copy is committed to main about once a day.
 on:
   schedule:
-    - cron: "23 5,11,17,23 * * *"
+    - cron: "17 * * * *"
   workflow_dispatch:
   push:
     branches: [main]
     paths:
       - ".github/workflows/feeds.yml"
       - "tools/feeds.py"
+      - "fed-calendar.json"
 
 permissions:
   contents: write
@@ -24,17 +27,42 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - name: Взять прошлые данные
+        run: |
+          echo "MAIN_STAMP=$(python3 -c "import json; print(json.load(open('fed.json')).get('updated') or '')" 2>/dev/null || true)" >> "$GITHUB_ENV"
+          if git fetch --quiet --depth=1 origin data 2>/dev/null; then
+            git show FETCH_HEAD:fed.json > "$RUNNER_TEMP/prev.json" 2>/dev/null && cp "$RUNNER_TEMP/prev.json" fed.json || true
+          fi
       - name: Обновить fed.json
         run: python3 tools/feeds.py
-      - name: Сохранить изменения
+      - name: Опубликовать в ветке data
         run: |
+          python3 -c "import json; json.load(open('fed.json'))"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          blob=$(git hash-object -w fed.json)
+          tree=$(printf '100644 blob %s\tfed.json\n' "$blob" | git mktree)
+          commit=$(git commit-tree "$tree" -m "Данные: $(date -u +%FT%H:%MZ)")
+          git push --quiet --force origin "$commit:refs/heads/data"
+      - name: Раз в сутки сохранить копию в main
+        run: |
+          due=$(python3 -c "
+          import datetime as dt, os
+          s = os.environ.get('MAIN_STAMP', '')
+          try:
+              age = (dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(s.replace('Z', '+00:00'))).total_seconds()
+          except ValueError:
+              age = 1e9
+          print('yes' if age > 20 * 3600 else 'no')")
+          if [ "$due" != "yes" ] && [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "Копия в main свежая"
+            exit 0
+          fi
           if git diff --quiet -- fed.json; then
             echo "Изменений нет"
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add fed.json
-          git commit -m "Данные ФРС: $(date -u +%F)"
-          git pull --rebase origin main
-          git push origin HEAD:main
+          git commit --quiet -m "Данные ФРС: $(date -u +%F)"
+          git pull --quiet --rebase origin main
+          git push --quiet origin HEAD:main
