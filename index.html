@@ -236,6 +236,7 @@ img{max-width:100%}
 .chart-panel.expanded .lw{height:100%}
 .chart-panel.expanded #lwNote{display:none}
 body.noscroll{overflow:hidden}
+.chart-ctl{display:flex;flex-wrap:wrap;gap:8px 12px}
 </style>
 </head>
 <body>
@@ -267,9 +268,9 @@ body.noscroll{overflow:hidden}
 
     <p class="stamp"><span class="live-dot off" id="liveDot"></span><span id="liveText">Подключаюсь к Hyperliquid…</span></p>
     <div class="tiles q">
-      <div class="tile"><div class="lab">Фандинг BTC</div><div class="tile-v" id="lFund">—</div><div class="tile-s" id="lFundS"></div></div>
-      <div class="tile"><div class="lab">Открытый интерес</div><div class="tile-v" id="lOi">—</div><div class="tile-s" id="lOiS"></div></div>
-      <div class="tile"><div class="lab">Объём за сутки</div><div class="tile-v" id="lVol">—</div><div class="tile-s" id="lVolS"></div></div>
+      <div class="tile"><div class="lab">Фандинг, перп BTC</div><div class="tile-v" id="lFund">—</div><div class="tile-s" id="lFundS"></div></div>
+      <div class="tile"><div class="lab">Открытый интерес, перп</div><div class="tile-v" id="lOi">—</div><div class="tile-s" id="lOiS"></div></div>
+      <div class="tile"><div class="lab">Объём за сутки, перп</div><div class="tile-v" id="lVol">—</div><div class="tile-s" id="lVolS"></div></div>
       <div class="tile"><div class="lab">Плечо вольта</div><div class="tile-v" id="lLev">—</div><div class="tile-s" id="lLevS"></div></div>
     </div>
 
@@ -288,10 +289,15 @@ body.noscroll{overflow:hidden}
   <section class="sec" id="chart">
     <div class="sec-head">
       <h2>График BTC</h2>
-      <p class="sec-note">Hyperliquid, бессрочный контракт</p>
+      <p class="sec-note" id="mkNote">Hyperliquid, спот UBTC/USDC</p>
     </div>
     <div class="panel stack chart-panel" id="chartPanel">
       <div class="chart-bar">
+        <div class="chart-ctl">
+        <div class="seg" id="mk" role="group" aria-label="Рынок">
+          <button type="button" data-mk="spot" aria-pressed="true">Спот</button>
+          <button type="button" data-mk="perp" aria-pressed="false">Перп</button>
+        </div>
         <div class="seg" id="tf" role="group" aria-label="Интервал свечей">
           <button type="button" data-tf="1m" aria-pressed="false">1м</button>
           <button type="button" data-tf="5m" aria-pressed="false">5м</button>
@@ -300,6 +306,7 @@ body.noscroll{overflow:hidden}
           <button type="button" data-tf="4h" aria-pressed="false">4ч</button>
           <button type="button" data-tf="1d" aria-pressed="true">1д</button>
           <button type="button" data-tf="1w" aria-pressed="false">1н</button>
+        </div>
         </div>
         <button type="button" class="btn" id="expand">Развернуть</button>
       </div>
@@ -680,7 +687,7 @@ function renderHero(){
   if (now){
     $("hPrice").textContent = usd(now.price);
     if (now.chg != null) sub.append(chgNode(now.chg), " за сутки · ");
-    sub.append(now.live ? "живая цена, перп на Hyperliquid" : "из отчёта за " + longDate(now.date));
+    sub.append(now.live ? "живая цена, спот на Hyperliquid" : "из отчёта за " + longDate(now.date));
   } else {
     $("hPrice").textContent = "—";
     sub.textContent = "Цена появится вместе с отчётом";
@@ -1169,6 +1176,12 @@ const {S, $, h, usd, usdBig, pct, nf0, nf2} = D;
 const API = "https://api.hyperliquid.xyz/info";
 const WSS = "wss://api.hyperliquid.xyz/ws";
 const VAULT = "0x53f8f390fd4f70941c5d160a964f6893c8dbceff";
+const MARKETS = {spot: {coin: "@142", name: "спот", note: "Hyperliquid, спот UBTC/USDC"}, perp: {coin: "BTC", name: "перп", note: "Hyperliquid, бессрочный контракт"}};
+let mkt = "spot";
+try { const v = localStorage.getItem("desk.mkt"); if (v && MARKETS[v]) mkt = v; } catch (e){}
+const coin = () => MARKETS[mkt].coin;
+const sane = (r) => +r.h < 5e6 && +r.l > 0 && +r.h / +r.l < 3;
+let P = null;   // perp context: funding, open interest, volume
 const LW = window.LightweightCharts;
 const dark = () => window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -1188,27 +1201,35 @@ function renderLive(){
   $("liveDot").classList.toggle("off", !L);
   set("liveText", L ? "Hyperliquid, " + (wsOpen ? "поток в реальном времени" : "обновление каждые 15 секунд") + ", последние данные в " + clock(L.at)
     : fails > 1 ? "Живые данные Hyperliquid сейчас недоступны, показаны цифры из отчёта" : "Подключаюсь к Hyperliquid…");
-  if (!L){ for (const id of ["lFund","lOi","lVol"]) set(id, "—"); return; }
+  if (!P){ for (const id of ["lFund","lOi","lVol"]) set(id, "—"); return; }
   const fund = $("lFund"); fund.classList.remove("up", "down");
-  fund.textContent = pct(L.funding * 24 * 365 * 100, 1);
-  if (L.funding > 0) fund.classList.add("up"); else if (L.funding < 0) fund.classList.add("down");
-  set("lFundS", "в год; за час " + pct(L.funding * 100, 4) + ". Плюс: лонги платят шортам");
-  set("lOi", big(L.oi * L.price)); set("lOiS", nf0.format(L.oi) + " BTC в открытых позициях");
-  set("lVol", big(L.vol)); set("lVolS", "оборот перпа BTC за сутки");
+  fund.textContent = pct(P.funding * 24 * 365 * 100, 1);
+  if (P.funding > 0) fund.classList.add("up"); else if (P.funding < 0) fund.classList.add("down");
+  set("lFundS", "в год; за час " + pct(P.funding * 100, 4) + ". Плюс: лонги платят шортам");
+  set("lOi", big(P.oi * P.px)); set("lOiS", nf0.format(P.oi) + " BTC в открытых позициях перпа");
+  set("lVol", big(P.vol)); set("lVolS", "оборот перпа BTC за сутки");
 }
-function applyCtx(c){
+function applySpot(c){
   const px = +c.midPx || +c.markPx, prev = +c.prevDayPx;
   if (!(px > 0)) return;
-  S.live = {price: px, chg: prev ? (px / prev - 1) * 100 : null, funding: +c.funding, oi: +c.openInterest, vol: +c.dayNtlVlm, at: Date.now()};
+  S.live = {price: px, chg: prev ? (px / prev - 1) * 100 : null, at: Date.now()};
   fails = 0;
   if (!lastPx || Math.abs(px / lastPx - 1) > 0.0004){ lastPx = px; D.recalc(); } else D.renderHero();
+  renderLive();
+}
+function applyPerp(c){
+  const px = +c.markPx || +c.midPx;
+  if (!(px > 0)) return;
+  P = {funding: +c.funding, oi: +c.openInterest, vol: +c.dayNtlVlm, px};
   renderLive();
 }
 async function tick(){
   if (wsOpen && S.live && Date.now() - S.live.at < 20000) return;
   try {
-    const [meta, ctxs] = await hl({type: "metaAndAssetCtxs"});
-    applyCtx(ctxs[meta.universe.findIndex((u) => u.name === "BTC")]);
+    const [sp, pp] = await Promise.all([hl({type: "spotMetaAndAssetCtxs"}), hl({type: "metaAndAssetCtxs"})]);
+    const sc = sp[1].find((x) => x.coin === MARKETS.spot.coin);
+    if (sc) applySpot(sc);
+    applyPerp(pp[1][pp[0].universe.findIndex((u) => u.name === "BTC")]);
   } catch (e){
     fails++;
     if (S.live && Date.now() - S.live.at > 120000){ S.live = null; D.recalc(); }
@@ -1252,7 +1273,7 @@ function drawLines(){
 function legend(b){
   const el = $("lwLegend"); if (!b){ el.textContent = ""; return; }
   const ch = b.open ? (b.close / b.open - 1) * 100 : 0;
-  el.textContent = "BTC · О " + nf0.format(b.open) + "  В " + nf0.format(b.high) + "  Н " + nf0.format(b.low) + "  З " + nf0.format(b.close) + "  " + pct(ch, 2);
+  el.textContent = "BTC " + MARKETS[mkt].name + " · О " + nf0.format(b.open) + "  В " + nf0.format(b.high) + "  Н " + nf0.format(b.low) + "  З " + nf0.format(b.close) + "  " + pct(ch, 2);
 }
 function ensureChart(){
   if (chart || !LW) return;
@@ -1274,16 +1295,18 @@ async function loadCandles(){
   if (!LW){ note.textContent = "Библиотека графика не загрузилась, обновите страницу."; return; }
   ensureChart();
   for (const b of document.querySelectorAll("#tf button")) b.setAttribute("aria-pressed", String(b.dataset.tf === tf));
+  for (const b of document.querySelectorAll("#mk button")) b.setAttribute("aria-pressed", String(b.dataset.mk === mkt));
+  $("mkNote").textContent = MARKETS[mkt].note;
   const my = ++gen; noMore = false; loadingMore = false;
   try {
     const now = Date.now();
-    const rows = (await hl({type: "candleSnapshot", req: {coin: "BTC", interval: tf, startTime: now - PAGE * STEP[tf], endTime: now}})).sort((a, b) => a.t - b.t);
+    const rows = (await hl({type: "candleSnapshot", req: {coin: coin(), interval: tf, startTime: now - PAGE * STEP[tf], endTime: now}})).filter(sane).sort((a, b) => a.t - b.t);
     if (my !== gen) return;
     if (!rows.length) throw new Error("empty");
     data = rows.map(bar); vols = rows.map((r, i) => volBar(r, data[i])); earliest = rows[0].t;
     setAll(); chartOk = true; drawLines(); legend(data[data.length - 1]);
     chart.timeScale().setVisibleLogicalRange({from: Math.max(0, data.length - 140), to: data.length + 6});
-    note.textContent = "Свечи бессрочного контракта BTC на Hyperliquid, обновляются в реальном времени. Тяните график, чтобы листать историю; колесо мыши или щипок меняют масштаб, двойной щелчок по шкале цены возвращает автомасштаб. Оранжевые линии: цели на покупку, серые: рыночные уровни.";
+    note.textContent = "Свечи BTC на Hyperliquid (" + (mkt === "spot" ? "спот, пара UBTC/USDC" : "бессрочный контракт") + "), обновляются в реальном времени. Тяните график, чтобы листать историю; колесо мыши или щипок меняют масштаб, двойной щелчок по шкале цены возвращает автомасштаб. Оранжевые линии: цели на покупку, серые: рыночные уровни.";
     wsSubscribe();
   } catch (e){
     if (my !== gen) return;
@@ -1296,8 +1319,8 @@ async function loadMore(){
   loadingMore = true; const my = gen;
   try {
     const end = earliest - 1;
-    const rows = (await hl({type: "candleSnapshot", req: {coin: "BTC", interval: tf, startTime: end - PAGE * STEP[tf], endTime: end}}))
-      .filter((r) => r.t < earliest).sort((a, b) => a.t - b.t);
+    const rows = (await hl({type: "candleSnapshot", req: {coin: coin(), interval: tf, startTime: end - PAGE * STEP[tf], endTime: end}}))
+      .filter((r) => r.t < earliest && sane(r)).sort((a, b) => a.t - b.t);
     if (my !== gen) return;
     if (!rows.length){ noMore = true; return; }
     const range = chart.timeScale().getVisibleLogicalRange();
@@ -1308,7 +1331,7 @@ async function loadMore(){
   } catch (e){} finally { if (my === gen) loadingMore = false; }
 }
 function pushBar(r){
-  if (!chartOk || !data.length) return;
+  if (!chartOk || !data.length || !sane(r)) return;
   const b = bar(r), last = data[data.length - 1];
   if (b.time < last.time) return;
   if (b.time === last.time){ data[data.length - 1] = b; vols[vols.length - 1] = volBar(r, b); }
@@ -1319,7 +1342,7 @@ async function refreshTail(){
   if (!chartOk || document.hidden) return;
   try {
     const now = Date.now(), my = gen;
-    const rows = (await hl({type: "candleSnapshot", req: {coin: "BTC", interval: tf, startTime: now - 200 * STEP[tf], endTime: now}})).sort((a, b) => a.t - b.t);
+    const rows = (await hl({type: "candleSnapshot", req: {coin: coin(), interval: tf, startTime: now - 200 * STEP[tf], endTime: now}})).sort((a, b) => a.t - b.t);
     if (my !== gen || !rows.length) return;
     const lastRaw = (data[data.length - 1].time - shift()) * 1000;
     if (rows[0].t > lastRaw){ loadCandles(); return; }
@@ -1328,31 +1351,36 @@ async function refreshTail(){
 }
 
 /* ---------- WebSocket: candles and market context in real time ---------- */
-let ws = null, wsTf = null, wsRetry = 0, pingTimer = 0, ctxNext = null, ctxTimer = 0;
+let ws = null, wsKey = null, wsRetry = 0, pingTimer = 0, spotNext = null, perpNext = null, ctxTimer = 0;
 const wsSend = (o) => { try { ws.send(JSON.stringify(o)); } catch (e){} };
 function wsSubscribe(){
-  if (!wsOpen || wsTf === tf) return;
-  if (wsTf) wsSend({method: "unsubscribe", subscription: {type: "candle", coin: "BTC", interval: wsTf}});
-  wsSend({method: "subscribe", subscription: {type: "candle", coin: "BTC", interval: tf}});
-  wsTf = tf;
+  const key = coin() + "|" + tf;
+  if (!wsOpen || wsKey === key) return;
+  if (wsKey){ const [c, i] = wsKey.split("|"); wsSend({method: "unsubscribe", subscription: {type: "candle", coin: c, interval: i}}); }
+  wsSend({method: "subscribe", subscription: {type: "candle", coin: coin(), interval: tf}});
+  wsKey = key;
 }
 function wsConnect(){
   if (!("WebSocket" in window)) return;
   try { ws = new WebSocket(WSS); } catch (e){ return; }
   ws.onopen = () => {
-    wsOpen = true; wsRetry = 0; wsTf = null;
-    wsSend({method: "subscribe", subscription: {type: "activeAssetCtx", coin: "BTC"}});
+    wsOpen = true; wsRetry = 0; wsKey = null;
+    wsSend({method: "subscribe", subscription: {type: "activeAssetCtx", coin: MARKETS.perp.coin}});
+    wsSend({method: "subscribe", subscription: {type: "activeAssetCtx", coin: MARKETS.spot.coin}});
     wsSubscribe(); refreshTail();
     pingTimer = setInterval(() => wsSend({method: "ping"}), 30000);
     renderLive();
   };
   ws.onmessage = (e) => {
     let m; try { m = JSON.parse(e.data); } catch (x){ return; }
-    if (m.channel === "candle"){ const r = m.data; if (r && r.s === "BTC" && r.i === tf) pushBar(r); }
-    else if (m.channel === "activeAssetCtx" && m.data && m.data.ctx){
-      ctxNext = m.data.ctx;
-      if (!ctxTimer) ctxTimer = setTimeout(() => { ctxTimer = 0; applyCtx(ctxNext); }, 800);
-    }
+    if (m.channel === "candle"){ const r = m.data; if (r && r.s === coin() && r.i === tf) pushBar(r); return; }
+    if ((m.channel !== "activeAssetCtx" && m.channel !== "activeSpotAssetCtx") || !m.data || !m.data.ctx) return;
+    if (m.data.coin === MARKETS.spot.coin) spotNext = m.data.ctx; else if (m.data.coin === MARKETS.perp.coin) perpNext = m.data.ctx;
+    if (!ctxTimer) ctxTimer = setTimeout(() => {
+      ctxTimer = 0;
+      if (perpNext){ applyPerp(perpNext); perpNext = null; }
+      if (spotNext){ applySpot(spotNext); spotNext = null; }
+    }, 800);
   };
   ws.onclose = () => {
     wsOpen = false; clearInterval(pingTimer); renderLive();
@@ -1452,6 +1480,9 @@ function initTv(){
 for (const b of document.querySelectorAll("#tf button")){
   b.addEventListener("click", () => { tf = b.dataset.tf; try { localStorage.setItem("desk.tf", tf); } catch (e){} loadCandles(); });
 }
+for (const b of document.querySelectorAll("#mk button")){
+  b.addEventListener("click", () => { mkt = b.dataset.mk; try { localStorage.setItem("desk.mkt", mkt); } catch (e){} loadCandles(); });
+}
 $("expand").addEventListener("click", () => setExpanded(!expanded));
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && expanded) setExpanded(false); });
 S.onData = drawLines;
@@ -1465,7 +1496,7 @@ if ("IntersectionObserver" in window){
   io.observe($("markets"));
 } else initTv();
 
-D.chartState = () => ({tf, bars: data.length, wsOpen, noMore, first: data[0] && data[0].time, last: data[data.length - 1], range: chart ? chart.timeScale().getVisibleLogicalRange() : null});
+D.chartState = () => ({tf, mkt, bars: data.length, wsOpen, noMore, first: data[0] && data[0].time, last: data[data.length - 1], range: chart ? chart.timeScale().getVisibleLogicalRange() : null});
 D.loadMore = loadMore;
 renderLive();
 tick(); loadCandles(); loadVault(); wsConnect();
