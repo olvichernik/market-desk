@@ -1741,7 +1741,7 @@ const ETF = [
 ];
 let eIdx = 0, etfDone = false;
 try { const i = ETF.findIndex((a) => a.k === localStorage.getItem("desk.etf")); if (i > 0) eIdx = i; } catch (e){}
-const flowTxt = (m) => (m > 0 ? "+" : m < 0 ? "−" : "") + "$" + (Math.abs(m) >= 1000 ? nf2.format(Math.abs(m) / 1000) + " млрд" : nf1.format(Math.abs(m)) + " млн");
+const flowTxt = (m) => !m ? "$0" : (m > 0 ? "+" : "−") + "$" + (Math.abs(m) >= 1000 ? nf2.format(Math.abs(m) / 1000) + " млрд" : nf1.format(Math.abs(m)) + " млн");
 const plur = (n, a, b, c) => { const m = n % 100, k = n % 10; return m > 10 && m < 20 ? c : k === 1 ? a : k > 1 && k < 5 ? b : c; };
 const sum = (rows) => rows.reduce((t, x) => t + x.flow, 0);
 function etfSeries(k){
