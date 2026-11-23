@@ -243,6 +243,24 @@ body.noscroll{overflow:hidden}
 .chips button.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .tvbox.big{height:560px}
 @media (min-width:760px){.tvbox.big{height:640px}}
+.mk-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.mk-side{order:-1;padding:8px}
+.tk-list{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.tk{display:flex;align-items:center;gap:10px;flex:none;border:1px solid transparent;background:transparent;border-radius:8px;padding:6px 10px;cursor:pointer;text-align:left;min-height:44px;color:var(--ink)}
+.tk:hover{background:var(--sunken)}
+.tk.on{background:var(--accent-wash);border-color:var(--accent)}
+.tk-logo,.tk-ph{width:28px;height:28px;border-radius:50%;flex:none;background:var(--sunken);object-fit:cover}
+.tk-ph{display:flex;align-items:center;justify-content:center;font:600 13px var(--f-body);color:var(--ink-2)}
+.tk-t{display:flex;flex-direction:column;min-width:0}
+.tk-n{font-weight:600;font-size:14px;line-height:1.25;white-space:nowrap}
+.tk-s{font:400 11.5px/1.2 var(--f-mono);color:var(--ink-3)}
+@media (min-width:980px){
+  .mk-grid{grid-template-columns:minmax(0,1fr) 250px;align-items:start}
+  .mk-side{order:0;max-height:674px;overflow-y:auto}
+  .tk-list{flex-direction:column;overflow-x:visible;padding-bottom:0}
+  .tk{flex:initial;width:100%}
+  .tk-n{white-space:normal}
+}
 </style>
 </head>
 <body>
@@ -427,8 +445,10 @@ body.noscroll{overflow:hidden}
       <p class="sec-note">Графики, котировки и календарь TradingView</p>
     </div>
     <div class="seg" id="fold" role="group" aria-label="Папки"></div>
-    <div class="chips" id="foldItems" role="group" aria-label="Инструменты папки"></div>
-    <div class="panel"><div class="tvbox big" id="tvChart"><p>График TradingView загружается. Если он не появился, виджет заблокирован браузером или расширением.</p></div></div>
+    <div class="mk-grid">
+      <div class="panel"><div class="tvbox big" id="tvChart"><p>График TradingView загружается. Если он не появился, виджет заблокирован браузером или расширением.</p></div></div>
+      <div class="panel mk-side"><div class="tk-list" id="foldItems" role="group" aria-label="Инструменты папки"></div></div>
+    </div>
     <div class="panel"><div class="tvbox" id="tvQuotes"><p>Котировки папки загружаются.</p></div></div>
     <div class="panel"><div class="tvbox cal" id="tvCal"><p>Экономический календарь TradingView загружается.</p></div></div>
   </section>
@@ -1485,7 +1505,7 @@ async function loadWatch(){
     const d = await (await fetch("watchlist.json", {cache: "no-store"})).json();
     WL = (Array.isArray(d.folders) ? d.folders : []).slice(0, 12).map((f) => ({
       name: String(f.name || "").slice(0, 30),
-      items: (Array.isArray(f.items) ? f.items : []).slice(0, 30).filter((it) => it && symOk(it.s)).map((it) => ({s: it.s, n: String(it.n || it.s).slice(0, 30)})),
+      items: (Array.isArray(f.items) ? f.items : []).slice(0, 30).filter((it) => it && symOk(it.s)).map((it) => ({s: it.s, n: String(it.n || it.s).slice(0, 30), l: typeof it.l === "string" && /^[A-Za-z0-9\/_-]{1,60}$/.test(it.l) ? it.l : ""})),
     })).filter((f) => f.name && f.items.length);
     let saved = null; try { saved = localStorage.getItem("desk.fold"); } catch (e){}
     const i = WL.findIndex((f) => f.name === saved); fIdx = i < 0 ? 0 : i;
@@ -1499,10 +1519,24 @@ function renderFolders(){
     fIdx = i; try { localStorage.setItem("desk.fold", f.name); } catch (e){}
     renderFolders(); if (tvDone){ showChart(); showQuotes(); }
   }})));
-  $("foldItems").replaceChildren(...WL[fIdx].items.map((it) => h("button", {type: "button", class: it.s === cur ? "on" : null, "aria-pressed": String(it.s === cur), text: it.n, title: it.s, onclick: () => {
-    picked[WL[fIdx].name] = it.s; try { localStorage.setItem("desk.picked", JSON.stringify(picked)); } catch (e){}
-    renderFolders(); if (tvDone) showChart(); else initTv();
-  }})));
+  $("foldItems").replaceChildren(...WL[fIdx].items.map((it) => {
+    const ph = () => h("span", {class: "tk-ph", "aria-hidden": "true", text: it.n.slice(0, 1).toUpperCase()});
+    let logo = ph();
+    if (it.l){
+      const img = h("img", {class: "tk-logo", alt: "", loading: "lazy", width: 28, height: 28, src: "https://s3-symbol-logo.tradingview.com/" + it.l + ".svg"});
+      img.addEventListener("error", () => img.replaceWith(ph()));
+      logo = img;
+    }
+    const b = h("button", {type: "button", class: "tk" + (it.s === cur ? " on" : ""), "aria-pressed": String(it.s === cur), title: it.s, "data-s": it.s},
+      logo, h("span", {class: "tk-t"}, h("span", {class: "tk-n", text: it.n}), h("span", {class: "tk-s", text: it.s.split(":")[1]})));
+    b.addEventListener("click", () => {
+      picked[WL[fIdx].name] = it.s; try { localStorage.setItem("desk.picked", JSON.stringify(picked)); } catch (e){}
+      for (const x of document.querySelectorAll("#foldItems .tk")){ const on = x.dataset.s === it.s; x.classList.toggle("on", on); x.setAttribute("aria-pressed", String(on)); }
+      if (tvDone) showChart(); else initTv();
+    });
+    return b;
+  }));
+  $("foldItems").scrollTop = 0; $("foldItems").scrollLeft = 0;
 }
 const tvTheme = () => dark() ? "dark" : "light";
 function showChart(){
