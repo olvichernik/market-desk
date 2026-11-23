@@ -1,0 +1,1082 @@
+<title>Рыночный пульт</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geologica:wght@500;600;700&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one working column. The level map sits beside the what-if readout and stacks on a phone.
+   All market data comes from data.json published next to the page, so the page needs no sign-in. */
+:root{
+  --plane:#eef2f3; --surface:#fbfcfc; --sunken:#e6ebed;
+  --ink:#0e1316; --ink-2:#47525a; --ink-3:#66727a;
+  --rule:#dde4e7; --rule-strong:#bcc7cc;
+  --accent:#2a78d6; --accent-strong:#1c5cab; --on-accent:#ffffff; --accent-wash:rgba(42,120,214,.10);
+  --tier:#eb6834;
+  --up:#006300; --down:#c13030;
+  --warn-bg:#fdf1d3; --warn-ink:#553d00; --warn-rule:#e3c779;
+  --f-display:"Geologica","Segoe UI",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SF Mono",Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --plane:#0f1214; --surface:#171b1e; --sunken:#20262a;
+    --ink:#eef1f2; --ink-2:#bcc5ca; --ink-3:#8f9aa1;
+    --rule:#272e33; --rule-strong:#3a444a;
+    --accent:#3987e5; --accent-strong:#86b6ef; --on-accent:#ffffff; --accent-wash:rgba(57,135,229,.14);
+    --tier:#d95926;
+    --up:#0ca30c; --down:#e66767;
+    --warn-bg:#33290f; --warn-ink:#f3dea4; --warn-rule:#5c4a1c;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --plane:#0f1214; --surface:#171b1e; --sunken:#20262a;
+  --ink:#eef1f2; --ink-2:#bcc5ca; --ink-3:#8f9aa1;
+  --rule:#272e33; --rule-strong:#3a444a;
+  --accent:#3987e5; --accent-strong:#86b6ef; --on-accent:#ffffff; --accent-wash:rgba(57,135,229,.14);
+  --tier:#d95926;
+  --up:#0ca30c; --down:#e66767;
+  --warn-bg:#33290f; --warn-ink:#f3dea4; --warn-rule:#5c4a1c;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{background:var(--plane);color:var(--ink);font:400 15px/1.5 var(--f-body);-webkit-text-size-adjust:100%}
+h1,h2,h3,h4,p,ul{margin:0}
+ul{padding:0;list-style:none}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+.page{max-width:1080px;margin:0 auto;padding-block:20px 48px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  display:flex;flex-direction:column;gap:32px}
+
+h1{font:700 22px/1.15 var(--f-display);letter-spacing:-.01em}
+h2{font:600 19px/1.2 var(--f-display);letter-spacing:-.005em;text-wrap:balance}
+h3{font:600 16px/1.3 var(--f-display);text-wrap:balance}
+h4,.lab{font:600 11px/1.3 var(--f-body);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.muted{color:var(--ink-3);font-size:13px}
+
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r);padding:16px;min-width:0}
+.sec{display:flex;flex-direction:column;gap:12px;min-width:0}
+.sec-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px}
+.sec-note{color:var(--ink-3);font-size:13px}
+.scroll{overflow-x:auto;max-width:100%}
+.stack{display:flex;flex-direction:column;gap:12px}
+.empty{color:var(--ink-2);font-size:14px;max-width:62ch}
+.btn{border:1px solid var(--rule-strong);background:var(--surface);border-radius:8px;padding:6px 12px;font-weight:600;font-size:14px;cursor:pointer;min-height:36px}
+.btn:hover{border-color:var(--ink-3)}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field input{background:var(--surface);border:1px solid var(--rule-strong);border-radius:8px;padding:8px 10px;font:500 16px/1.3 var(--f-mono);width:100%;max-width:220px;min-width:0}
+.hint{color:var(--ink-3);font-size:12.5px;max-width:62ch}
+input[type=range]{accent-color:var(--accent);width:100%;min-width:0;margin:0;height:28px}
+.banner{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;background:var(--warn-bg);color:var(--warn-ink);border:1px solid var(--warn-rule);border-radius:8px;padding:10px 12px;font-size:14px}
+.pill{display:inline-block;border:1px solid var(--rule-strong);border-radius:999px;padding:0 7px;font:500 11px/1.6 var(--f-body);color:var(--ink-2);white-space:nowrap;vertical-align:middle}
+.pill.goal{border-color:var(--tier)}
+
+.tbl{border-collapse:collapse;width:100%;font-size:14px}
+.tbl th,.tbl td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--rule);vertical-align:top}
+.tbl thead th{font:600 11px/1.3 var(--f-body);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.tbl td.r,.tbl th.r{text-align:right;white-space:nowrap}
+.tbl td.r{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.tbl tbody tr:last-child td{border-bottom:0}
+.tbl tr.grp th{padding-top:14px;font:600 11px/1.3 var(--f-body);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--rule-strong)}
+.tbl .sub{display:block;color:var(--ink-3);font-size:12.5px;line-height:1.35;margin-top:2px;max-width:46ch;font-family:var(--f-body)}
+.tbl tr.is-what td{background:var(--accent-wash)}
+.chg{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.chg.up,.up{color:var(--up)} .chg.down,.down{color:var(--down)} .chg.flat{color:var(--ink-3)}
+.linkbtn{background:none;border:0;padding:0;font:500 14px/1.3 var(--f-mono);color:var(--accent-strong);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+/* header */
+.top{display:flex;flex-direction:column;gap:14px}
+.top-line{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px}
+.stamp{color:var(--ink-2);font-size:13.5px}
+.hero{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));background:var(--surface);border:1px solid var(--rule);border-radius:var(--r)}
+.hero > div{padding:16px;min-width:0}
+.hero-main{grid-column:1 / -1;border-bottom:1px solid var(--rule)}
+.hero .stat + .stat{border-left:1px solid var(--rule)}
+.hero-fig{font:700 clamp(48px,11vw,60px)/1.05 var(--f-body);letter-spacing:-.02em;margin-top:4px}
+.hero-sub{color:var(--ink-2);font-size:14px;margin-top:6px}
+.stat-v{font:600 24px/1.2 var(--f-body);margin-top:6px;overflow-wrap:anywhere}
+.stat-s{color:var(--ink-2);font-size:13px;margin-top:4px}
+.jump{display:flex;flex-wrap:wrap;gap:8px}
+.jump button{border:1px solid var(--rule-strong);background:transparent;border-radius:999px;padding:6px 14px;font-weight:500;font-size:14px;cursor:pointer;min-height:36px}
+.jump button:hover{background:var(--surface)}
+@media (min-width:760px){
+  .hero{grid-template-columns:1.35fr 1fr 1fr}
+  .hero-main{grid-column:auto;border-bottom:0}
+  .hero .stat{border-left:1px solid var(--rule)}
+}
+
+/* digest */
+.dg-nav{display:flex;align-items:center;gap:6px}
+.dg-nav button{border:1px solid var(--rule-strong);background:var(--surface);border-radius:8px;width:38px;height:38px;cursor:pointer;font-size:16px}
+.dg-nav button:disabled{opacity:.4;cursor:default}
+.dg-nav select{border:1px solid var(--rule-strong);background:var(--surface);border-radius:8px;height:38px;padding:0 8px;font-size:15px;max-width:60vw}
+.dg{display:flex;flex-direction:column;gap:18px}
+.dg .lead{font-size:15.5px;max-width:68ch}
+.dg-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px}
+.dg-cols > div,.dg-block{display:flex;flex-direction:column;gap:8px;min-width:0}
+.bul li{position:relative;padding-left:16px;max-width:66ch}
+.bul li + li{margin-top:6px}
+.bul li::before{content:"";position:absolute;left:2px;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--ink-3)}
+.cal li{display:grid;grid-template-columns:5.2em minmax(0,1fr);gap:10px}
+.cal li + li{margin-top:6px}
+.cal .t{font-family:var(--f-mono);font-size:13.5px;color:var(--ink-2)}
+.src li{font-size:13.5px;color:var(--ink-2);overflow-wrap:anywhere}
+.src li + li{margin-top:4px}
+.src a{color:var(--accent-strong)}
+
+/* levels */
+.duo{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+@media (min-width:860px){.duo{grid-template-columns:minmax(0,400px) minmax(0,1fr);align-items:start}}
+.pane-map{display:flex;flex-direction:column;gap:12px}
+.pane-calc{display:flex;flex-direction:column;gap:16px;min-width:0}
+.map-cols{display:grid;grid-template-columns:1fr 1fr;font:600 11px/1.3 var(--f-body);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.map-cols span:first-child{text-align:right;padding-right:30px}
+.map-cols span:last-child{padding-left:30px}
+.map svg{display:block;max-width:100%;height:auto}
+.mp-axis{stroke:var(--rule-strong);stroke-width:1}
+.mp-now{stroke:var(--ink);stroke-width:1;opacity:.45}
+.mp-what{stroke:var(--accent);stroke-width:2}
+.mp-band{fill:var(--accent-wash);stroke:none}
+.mp-tick{stroke:var(--ink-2);stroke-width:1.5}
+.mp-lead{stroke:var(--rule-strong);stroke-width:1;fill:none}
+.mp-v{font:500 12.5px var(--f-mono);fill:var(--ink)}
+.mp-v.strong{font-weight:700}
+.mp-n{font:400 10.5px var(--f-body);fill:var(--ink-2)}
+.mp-dnow{fill:var(--ink);stroke:var(--surface);stroke-width:2}
+.mp-dwhat{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.mp-tier{fill:var(--surface);stroke:var(--tier);stroke-width:2}
+.mp-tier.hit{fill:var(--tier);stroke:var(--surface)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--ink-2)}
+.legend li{display:flex;align-items:center;gap:6px}
+.legend svg{flex:none}
+.what{display:flex;flex-direction:column;gap:10px}
+.what-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px}
+.what-in{display:flex;align-items:baseline;gap:4px}
+.what-in .cur{font:600 26px/1 var(--f-body);color:var(--ink-3)}
+#whatNum,#vMoveNum{border:0;border-bottom:2px solid var(--accent);border-radius:0;background:transparent;font:700 30px/1.1 var(--f-body);width:5.4em;padding:0 0 2px;min-width:0}
+#vMoveNum{width:3.4em}
+.what-delta{color:var(--ink-2);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:1px solid var(--rule);background:var(--sunken);border-radius:999px;padding:5px 11px;font-size:13px;cursor:pointer;min-height:32px}
+.chips button:hover{border-color:var(--ink-3)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:560px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.tile{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r);padding:12px 14px;min-width:0}
+.tile-v{font:600 21px/1.2 var(--f-body);margin-top:6px;overflow-wrap:anywhere}
+.tile-s{color:var(--ink-2);font-size:12.5px;line-height:1.35;margin-top:4px}
+
+/* vault */
+.vault-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px}
+.vault-head a{color:var(--accent-strong);font-size:14px}
+.vault-note{color:var(--ink-2);font-size:14px;max-width:70ch}
+.v-what{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+@media (min-width:760px){.v-what{grid-template-columns:220px minmax(0,1fr);align-items:start}}
+.v-out{font:600 21px/1.3 var(--f-body)}
+
+/* history */
+.charts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px}
+.chart{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r);padding:12px 14px;min-width:0}
+.chart-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.chart-name{font-weight:600;font-size:14px;min-width:0;overflow-wrap:anywhere}
+.chart-val{font:600 15px/1.2 var(--f-mono);white-space:nowrap}
+.chart-sub{color:var(--ink-3);font-size:12.5px;margin-top:2px}
+.plot{position:relative;margin-top:8px;cursor:crosshair;border-radius:4px}
+.plot svg{display:block;max-width:100%;height:auto}
+.ch-line{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.ch-area{fill:var(--accent-wash);stroke:none}
+.ch-grid{stroke:var(--rule);stroke-width:1}
+.ch-base{stroke:var(--rule-strong);stroke-width:1}
+.ch-tick{font:400 10px var(--f-mono);fill:var(--ink-3)}
+.ch-dot{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.ch-cross{stroke:var(--ink-3);stroke-width:1}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--surface);border-radius:6px;padding:5px 8px;font-size:12px;line-height:1.3;white-space:nowrap;z-index:2}
+.tip b{display:block;font:600 13px/1.3 var(--f-mono)}
+.tv summary{cursor:pointer;font-weight:600;font-size:14px}
+.tv[open] summary{margin-bottom:10px}
+
+footer{color:var(--ink-3);font-size:13px;max-width:70ch;border-top:1px solid var(--rule);padding-top:16px}
+</style>
+
+<div class="page">
+
+  <header class="top">
+    <div class="top-line">
+      <h1>Рыночный пульт</h1>
+      <p class="stamp" id="stamp">Загружаю отчёты…</p>
+    </div>
+
+    <div class="hero">
+      <div class="hero-main">
+        <div class="lab">Bitcoin</div>
+        <div class="hero-fig" id="hPrice">—</div>
+        <div class="hero-sub" id="hSub">Цена появится вместе с отчётом</div>
+      </div>
+      <div class="stat">
+        <div class="lab">До ближайшей цели</div>
+        <div class="stat-v" id="hNext">—</div>
+        <div class="stat-s" id="hNextSub"></div>
+      </div>
+      <div class="stat">
+        <div class="lab">Вольт за месяц</div>
+        <div class="stat-v" id="hVault">—</div>
+        <div class="stat-s" id="hVaultSub"></div>
+      </div>
+    </div>
+
+    <nav class="jump" aria-label="Разделы">
+      <button type="button" data-go="today">Утренний отчёт</button>
+      <button type="button" data-go="ladder">Уровни и цели</button>
+      <button type="button" data-go="vault">Вольт</button>
+    </nav>
+
+    <div class="banner" id="status" role="status" hidden><span id="statusText"></span><button type="button" class="btn" id="retry" hidden>Повторить</button></div>
+  </header>
+
+  <section class="sec" id="today">
+    <div class="sec-head">
+      <h2>Утренний отчёт</h2>
+      <div class="dg-nav">
+        <button type="button" id="dgPrev" aria-label="Более ранний отчёт" disabled>←</button>
+        <select id="dgSel" aria-label="Дата отчёта" disabled><option>нет отчётов</option></select>
+        <button type="button" id="dgNext" aria-label="Более поздний отчёт" disabled>→</button>
+      </div>
+    </div>
+    <div class="panel" id="dgEmpty">
+      <p class="empty">Здесь выходит утренний отчёт: что произошло за ночь в Азии и на прошлой сессии США, почему, и что важного в календаре дня. Он обновляется по будням около 08:00 по Варшаве, прошлые дни остаются в списке дат.</p>
+    </div>
+    <div class="panel dg" id="dgPanel" hidden>
+      <div class="dg-block">
+        <h3 id="dgHeadline"></h3>
+        <p class="muted" id="dgAsOf"></p>
+      </div>
+      <p class="lead" id="dgSummary"></p>
+      <div class="scroll">
+        <table class="tbl" id="dgTable">
+          <thead><tr><th>Инструмент</th><th class="r">Уровень</th><th class="r">Изменение</th></tr></thead>
+        </table>
+      </div>
+      <div class="dg-cols" id="dgCols">
+        <div id="dgWatchBox"><h4>На что смотреть</h4><ul class="bul" id="dgWatch"></ul></div>
+        <div id="dgCalBox"><h4>Календарь, время по Варшаве</h4><ul class="cal" id="dgCal"></ul></div>
+      </div>
+      <div class="dg-block" id="dgUsBox"><h4>Прошлая сессия США</h4><p id="dgUs" style="max-width:68ch"></p></div>
+      <div class="dg-block" id="dgCryptoBox"><h4>Биткойн и крипторынок</h4><p id="dgCrypto" style="max-width:68ch"></p></div>
+      <div class="dg-block" id="dgSrcBox"><h4>Источники</h4><ul class="src" id="dgSrc"></ul></div>
+    </div>
+  </section>
+
+  <section class="sec" id="ladder">
+    <div class="sec-head">
+      <h2>Уровни и цели</h2>
+      <p class="sec-note" id="lvStamp"></p>
+    </div>
+    <div class="duo">
+      <div class="panel pane-map">
+        <div class="map-cols" aria-hidden="true"><span>Рынок</span><span>Цели на покупку</span></div>
+        <div class="map" id="map"></div>
+        <ul class="legend" aria-label="Обозначения">
+          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect class="mp-dnow" x="3" y="3" width="8" height="8" transform="rotate(45 7 7)"/></svg>цена сейчас</li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle class="mp-dwhat" cx="7" cy="7" r="5"/></svg>цена «если»</li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle class="mp-tier" cx="7" cy="7" r="4.5"/></svg>цель ждёт</li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle class="mp-tier hit" cx="7" cy="7" r="5"/></svg>цель сработает</li>
+          <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><line class="mp-tick" x1="2" y1="7" x2="12" y2="7"/></svg>рыночный уровень</li>
+        </ul>
+        <div class="scroll">
+          <table class="tbl" id="lvTable">
+            <thead><tr><th>Уровень</th><th class="r">Цена, от текущей</th><th class="r" id="lvOddsH" hidden>Шанс за 30 дней</th></tr></thead>
+            <tbody><tr><td colspan="3" class="muted">Уровни появятся вместе с отчётом.</td></tr></tbody>
+          </table>
+        </div>
+        <p class="hint" id="lvOddsNote" hidden></p>
+      </div>
+
+      <div class="pane-calc">
+        <div class="panel what">
+          <label class="lab" for="whatNum">Если цена BTC будет</label>
+          <div class="what-row">
+            <span class="what-in"><span class="cur">$</span><input id="whatNum" type="number" inputmode="numeric" min="0" step="100" placeholder="60000"></span>
+            <span class="what-delta" id="whatDelta"></span>
+          </div>
+          <input id="whatRange" type="range" step="100" min="20000" max="100000" value="60000" aria-label="Цена BTC, ползунок">
+          <div class="chips" id="whatChips"></div>
+        </div>
+
+        <div class="panel stack">
+          <h3>Калькулятор лестницы</h3>
+          <div class="field">
+            <label class="lab" for="budget">Бюджет на покупки, $</label>
+            <input id="budget" type="number" inputmode="numeric" min="0" step="500" placeholder="10000">
+          </div>
+          <p class="hint">Бюджет делится поровну между целями: цена дошла до цели, эта часть куплена. Число остаётся только в вашем браузере, по умолчанию стоит пример.</p>
+        </div>
+
+        <div class="tiles">
+          <div class="tile"><div class="lab">Сработает целей</div><div class="tile-v" id="rFilled">—</div><div class="tile-s" id="rFilledS"></div></div>
+          <div class="tile"><div class="lab">Потрачено</div><div class="tile-v" id="rSpent">—</div><div class="tile-s" id="rSpentS"></div></div>
+          <div class="tile"><div class="lab">Куплено BTC</div><div class="tile-v" id="rBtc">—</div><div class="tile-s" id="rBtcS"></div></div>
+          <div class="tile"><div class="lab">Средняя цена</div><div class="tile-v" id="rAvg">—</div><div class="tile-s" id="rAvgS"></div></div>
+          <div class="tile"><div class="lab">Результат</div><div class="tile-v" id="rPnl">—</div><div class="tile-s" id="rPnlS"></div></div>
+          <div class="tile"><div class="lab">До возврата в ноль</div><div class="tile-v" id="rBack">—</div><div class="tile-s" id="rBackS"></div></div>
+        </div>
+
+        <div class="panel stack">
+          <h3>Лестница на каждом уровне</h3>
+          <div class="scroll">
+            <table class="tbl" id="scn">
+              <thead><tr><th>Цена BTC</th><th class="r">Целей</th><th class="r">Куплено BTC</th><th class="r">Средняя</th><th class="r">Результат</th></tr></thead>
+              <tbody><tr><td colspan="5" class="muted">Таблица заполнится вместе с отчётом.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="vault">
+    <div class="sec-head">
+      <h2>Вольт</h2>
+      <p class="sec-note" id="vStamp"></p>
+    </div>
+    <div class="panel" id="vEmpty">
+      <p class="empty">Данные вольта идут напрямую с Hyperliquid. Сейчас они не загрузились.</p>
+    </div>
+    <div class="panel stack" id="vPanel" hidden>
+      <div class="vault-head">
+        <h3 id="vName"></h3>
+        <a id="vLink" target="_blank" rel="noopener noreferrer" hidden>Открыть на Hyperliquid</a>
+      </div>
+      <div class="tiles">
+        <div class="tile"><div class="lab">За сутки</div><div class="tile-v" id="vD">—</div><div class="tile-s" id="vDS"></div></div>
+        <div class="tile"><div class="lab">За неделю</div><div class="tile-v" id="vW">—</div><div class="tile-s" id="vWS"></div></div>
+        <div class="tile"><div class="lab">За месяц</div><div class="tile-v" id="vM">—</div><div class="tile-s" id="vMS"></div></div>
+        <div class="tile"><div class="lab">Просадка за месяц</div><div class="tile-v" id="vDD">—</div><div class="tile-s">от пика до дна за эти 30 дней</div></div>
+        <div class="tile"><div class="lab">Итог за всё время</div><div class="tile-v" id="vPnl">—</div><div class="tile-s">прибыль или убыток вольта в деньгах</div></div>
+        <div class="tile"><div class="lab">Оборот за месяц</div><div class="tile-v" id="vVlm">—</div><div class="tile-s">сумма всех сделок вольта</div></div>
+      </div>
+      <p class="vault-note" id="vNote"></p>
+      <div class="stack" id="vWhoBox" hidden>
+        <h4>Результат вкладчиков</h4>
+        <div class="tiles q">
+          <div class="tile"><div class="lab">Внесено всего</div><div class="tile-v" id="vDep">—</div><div class="tile-s">вводы вкладчиков за вычетом выводов, с запуска</div></div>
+          <div class="tile"><div class="lab">Результат на внесённое</div><div class="tile-v" id="vDepRet">—</div><div class="tile-s" id="vDepRetS"></div></div>
+          <div class="tile"><div class="lab">Вкладчиков в плюсе</div><div class="tile-v" id="vWho">—</div><div class="tile-s" id="vWhoS"></div></div>
+          <div class="tile"><div class="lab">Вводы и выводы за месяц</div><div class="tile-v" id="vFlow">—</div><div class="tile-s" id="vFlowS"></div></div>
+        </div>
+        <p class="hint" id="vWhoNote"></p>
+      </div>
+    </div>
+    <div class="panel v-what">
+      <div class="field">
+        <label class="lab" for="vAmt">Сумма в вольте, $</label>
+        <input id="vAmt" type="number" inputmode="numeric" min="0" step="100" placeholder="1000">
+        <span class="hint">Пример для расчёта, остаётся в вашем браузере.</span>
+      </div>
+      <div class="what">
+        <label class="lab" for="vMoveNum">Если вольт изменится на</label>
+        <div class="what-row">
+          <span class="what-in"><input id="vMoveNum" type="number" inputmode="decimal" min="-100" max="1000" step="5" value="0"><span class="cur">%</span></span>
+          <span class="v-out" id="vOut"></span>
+        </div>
+        <input id="vMove" type="range" min="-100" max="100" step="1" value="0" aria-label="Изменение вольта в процентах, ползунок">
+        <div class="chips" id="vChips"></div>
+        <p class="hint" id="vOutS"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="history" hidden>
+    <div class="sec-head">
+      <h2>История</h2>
+      <p class="sec-note" id="hsNote"></p>
+    </div>
+    <div class="charts" id="charts" hidden></div>
+    <div class="panel" id="hsEmpty">
+      <p class="empty">Графики строятся из утренних отчётов: по точке на инструмент за каждый день. Линии появятся, когда накопятся хотя бы два отчёта.</p>
+    </div>
+    <details class="panel tv" id="hsTableBox" hidden>
+      <summary>Таблица значений</summary>
+      <div class="scroll"><table class="tbl" id="hsTable"></table></div>
+    </details>
+  </section>
+
+  <footer>
+Отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
+  </footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+document.documentElement.lang = "ru";
+const NS = "http://www.w3.org/2000/svg";
+const $ = (id) => document.getElementById(id);
+
+/* ---------- small DOM helpers (all data goes in as text, never as markup) ---------- */
+function h(tag, attrs, ...kids){
+  const el = document.createElement(tag);
+  if (attrs) for (const [k, v] of Object.entries(attrs)){
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k === "text") el.textContent = v;
+    else if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.slice(2), v);
+    else if (v === true) el.setAttribute(k, "");
+    else el.setAttribute(k, String(v));
+  }
+  for (const kid of kids.flat()){
+    if (kid == null || kid === false) continue;
+    el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+function s(tag, attrs, text){
+  const el = document.createElementNS(NS, tag);
+  if (attrs) for (const [k, v] of Object.entries(attrs)) if (v != null) el.setAttribute(k, String(v));
+  if (text != null) el.textContent = text;
+  return el;
+}
+
+/* ---------- formatting ---------- */
+const nf0 = new Intl.NumberFormat("ru-RU", {maximumFractionDigits: 0});
+const nf1 = new Intl.NumberFormat("ru-RU", {minimumFractionDigits: 1, maximumFractionDigits: 1});
+const nf2 = new Intl.NumberFormat("ru-RU", {maximumFractionDigits: 2});
+const nf3 = new Intl.NumberFormat("ru-RU", {minimumFractionDigits: 3, maximumFractionDigits: 3});
+const MONTHS = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+const WD = ["вс","пн","вт","ср","чт","пт","сб"];
+const usd = (n) => n == null || !isFinite(n) ? "—" : (n < 0 ? "−$" : "$") + nf0.format(Math.abs(n));
+const usdBig = (n) => n == null ? "—" : Math.abs(n) >= 1e6 ? (n < 0 ? "−$" : "$") + nf1.format(Math.abs(n) / 1e6) + " млн" : usd(n);
+const btcf = (n) => new Intl.NumberFormat("ru-RU", {minimumFractionDigits: 4, maximumFractionDigits: 5}).format(n);
+function pct(n, digits){
+  if (n == null || !isFinite(n)) return "—";
+  const d = digits == null ? 1 : digits;
+  const t = new Intl.NumberFormat("ru-RU", {minimumFractionDigits: d, maximumFractionDigits: d}).format(Math.abs(n));
+  return (n > 0 ? "+" : n < 0 ? "−" : "") + t + "%";
+}
+function fmtLevel(v, unit){
+  if (v == null) return "—";
+  if (unit === "p3") return nf3.format(v);
+  const t = nf2.format(v);
+  return unit === "$" ? "$" + t : unit === "%" ? t + "%" : t;
+}
+const kshort = (v) => new Intl.NumberFormat("ru-RU", {maximumFractionDigits: 1}).format(v / 1000) + "k";
+function parseDate(str){ const [y, m, d] = str.split("-").map(Number); return new Date(y, m - 1, d); }
+function longDate(str){ const d = parseDate(str); return WD[d.getDay()] + ", " + d.getDate() + " " + MONTHS[d.getMonth()]; }
+function shortDate(str){ const d = parseDate(str); return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0"); }
+function daysAgo(str){ const t = new Date(); return Math.round((new Date(t.getFullYear(), t.getMonth(), t.getDate()) - parseDate(str)) / 864e5); }
+function plural(n, one, few, many){
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+}
+function toNum(v){ const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) && n > 0 ? n : 0; }
+function clip(str, max){ return str.length > max ? str.slice(0, Math.max(1, max - 1)) + "…" : str; }
+function lsGet(k, def){ try { const v = parseFloat(localStorage.getItem(k)); return isFinite(v) && v > 0 ? v : def; } catch (e){ return def; } }
+function lsSet(k, v){ try { localStorage.setItem(k, String(v)); } catch (e){} }
+
+/* ---------- normalising data.json ---------- */
+const str = (v, max) => typeof v === "string" ? v.slice(0, max || 2000) : "";
+const numv = (v) => typeof v === "number" && isFinite(v) ? v : null;
+const arr = (v, max) => Array.isArray(v) ? v.slice(0, max) : [];
+const isDate = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+function normVault(v){
+  if (!v || typeof v !== "object") return null;
+  return {
+    name: str(v.name, 80) || "Вольт",
+    address: /^0x[0-9a-fA-F]{40}$/.test(str(v.address, 60)) ? v.address : "",
+    sharePrice: numv(v.sharePrice) > 0 ? v.sharePrice : null, tvl: numv(v.tvl),
+    ret1w: numv(v.ret1w), ret1m: numv(v.ret1m), ret3m: numv(v.ret3m), retLife: numv(v.retLife),
+    maxDD: numv(v.maxDD), pnlAll: numv(v.pnlAll), btc1m: numv(v.btc1m), btcLife: numv(v.btcLife),
+    asOf: str(v.asOf, 200), note: str(v.note, 1200),
+  };
+}
+function normDigest(d){
+  if (!d || typeof d !== "object" || !isDate(d.date)) return null;
+  return {
+    date: d.date,
+    asOf: str(d.asOf, 200), headline: str(d.headline, 300), summary: str(d.summary, 4000), us: str(d.us, 4000), crypto: str(d.crypto, 4000),
+    watch: arr(d.watch, 12).filter((x) => typeof x === "string").map((x) => x.slice(0, 600)),
+    rows: arr(d.rows, 60).filter((r) => r && typeof r === "object").map((r) => ({
+      group: str(r.group, 60) || "Прочее", key: str(r.key, 40), name: str(r.name, 80) || "Без названия",
+      level: numv(r.level), unit: str(r.unit, 4), chg: numv(r.chg), chgText: str(r.chgText, 40),
+      note: str(r.note, 300), stale: r.stale === true,
+    })),
+    calendar: arr(d.calendar, 20).filter((c) => c && typeof c === "object").map((c) => ({time: str(c.time, 40), text: str(c.text, 400)})),
+    levels: arr(d.levels, 12).filter((l) => l && typeof l === "object" && numv(l.value) > 0).map((l) => ({
+      key: str(l.key, 40), name: str(l.name, 60) || "Уровень", value: l.value, note: str(l.asOfNote, 200), stale: l.stale === true,
+    })),
+    sources: arr(d.sources, 20).filter((x) => x && typeof x === "object").map((x) => ({
+      title: str(x.title, 200), url: /^https?:\/\//i.test(str(x.url, 600)) ? str(x.url, 600) : "",
+    })).filter((x) => x.title || x.url),
+    vault: normVault(d.vault),
+  };
+}
+
+/* ---------- state ---------- */
+const S = {
+  load: "loading", digests: [], targets: [], sel: null,
+  what: null, whatTouched: false, chipSig: "", histSig: "",
+  budget: lsGet("desk.budget", 10000), vAmt: lsGet("desk.vamt", 1000), vMove: 0, vChipSig: "",
+};
+
+function btcNow(){
+  for (let i = 0; i < S.digests.length; i++){
+    const r = S.digests[i].rows.find((x) => x.key === "btc" && x.level != null);
+    if (r) return {price: r.level, chg: i === 0 ? r.chg : null, date: S.digests[i].date};
+  }
+  return null;
+}
+function levelSet(){   // on-chain levels, loaded by the live layer
+  return S.lv && S.lv.levels.length ? S.lv : {date: null, note: "", levels: []};
+}
+function vaultNow(){   // figures computed from the vault's own history on Hyperliquid, by the live layer
+  return S.vaultLive ? {v: S.vaultLive} : null;
+}
+function domain(){
+  const vals = [];
+  const now = btcNow(); if (now) vals.push(now.price);
+  for (const l of levelSet().levels) vals.push(l.value);
+  for (const t of S.targets) vals.push(t.price);
+  if (!vals.length) return null;
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (hi - lo < hi * 0.1){ lo *= 0.9; hi *= 1.1; }
+  const pad = (hi - lo) * 0.12;
+  return {lo: Math.max(0, Math.floor((lo - pad) / 500) * 500), hi: Math.ceil((hi + pad) / 500) * 500};
+}
+
+/* ---------- the ladder maths: an equal share of the budget at every target ---------- */
+function calc(P){
+  const n = S.targets.length; const per = n ? S.budget / n : 0;
+  let filled = 0, spent = 0, btc = 0;
+  for (const t of S.targets) if (P <= t.price){ filled++; spent += per; btc += per / t.price; }
+  const avg = btc > 0 ? spent / btc : null;
+  return {
+    n, per, filled, spent, btc, avg, left: S.budget - spent,
+    pnl: btc > 0 ? btc * P - spent : null,
+    pnlPct: btc > 0 ? (btc * P / spent - 1) * 100 : null,
+    back: avg && P < avg ? (avg / P - 1) * 100 : null,
+  };
+}
+
+/* ---------- header ---------- */
+function chgNode(chg, chgText, digits){
+  const el = h("span", {class: "chg"});
+  if (chg == null){ el.classList.add("flat"); el.textContent = chgText || "—"; return el; }
+  el.classList.add(chg > 0 ? "up" : chg < 0 ? "down" : "flat");
+  el.textContent = (chg > 0 ? "▲ " : chg < 0 ? "▼ " : "") + (chgText || pct(chg, digits == null ? 2 : digits));
+  return el;
+}
+function renderHero(){
+  const d0 = S.digests[0];
+  if (d0){
+    const ago = daysAgo(d0.date);
+    const when = ago <= 0 ? "сегодня" : ago === 1 ? "вчера" : ago + " " + plural(ago, "день", "дня", "дней") + " назад";
+    $("stamp").textContent = "Последний отчёт: " + longDate(d0.date) + " (" + when + ")";
+  } else $("stamp").textContent = S.load === "loading" ? "Загружаю отчёты…" : "Отчётов пока нет";
+
+  const now = btcNow();
+  const sub = $("hSub"); sub.replaceChildren();
+  if (now){
+    $("hPrice").textContent = usd(now.price);
+    if (now.chg != null) sub.append(chgNode(now.chg), " за сутки · ");
+    sub.append("из отчёта за " + longDate(now.date));
+  } else {
+    $("hPrice").textContent = "—";
+    sub.textContent = "Цена появится вместе с отчётом";
+  }
+
+  let v = "—", vs = S.targets.length ? "" : "Цели появятся вместе с отчётом";
+  if (S.targets.length && now){
+    const below = S.targets.filter((t) => t.price < now.price);
+    const reached = S.targets.length - below.length;
+    if (!below.length){ v = "Все пройдены"; vs = "Цена ниже всех " + S.targets.length + " целей"; }
+    else {
+      v = pct((below[0].price / now.price - 1) * 100);
+      vs = "до " + usd(below[0].price) + (reached ? ", уже пройдено целей: " + reached : "");
+    }
+  } else if (S.targets.length){ v = usd(S.targets[0].price); vs = "верхняя цель"; }
+  $("hNext").textContent = v; $("hNextSub").textContent = vs;
+
+  const vn = vaultNow();
+  if (vn && vn.v.ret1m != null){
+    signTile("hVault", vn.v.ret1m, pct(vn.v.ret1m));
+    $("hVaultSub").textContent = (vn.v.btc1m != null ? "биткойн за то же время " + pct(vn.v.btc1m) : vn.v.name) + (vn.v.pnlAll != null ? "; итог за всё время " + usdBig(vn.v.pnlAll) : "");
+  } else { $("hVault").classList.remove("up", "down"); $("hVault").textContent = "—"; $("hVaultSub").textContent = "Данные вольта идут с Hyperliquid"; }
+}
+function renderStatus(){
+  const box = $("status"), text = $("statusText"), retry = $("retry");
+  let msg = ""; retry.hidden = true;
+  if (S.load === "loading") msg = "Загружаю данные…";
+  else if (S.load === "error"){ msg = "Данные не загрузились. Проверьте связь и попробуйте ещё раз."; retry.hidden = false; }
+  else if (S.digests[0] && daysAgo(S.digests[0].date) > 3) msg = "Последний отчёт вышел " + daysAgo(S.digests[0].date) + " " + plural(daysAgo(S.digests[0].date), "день", "дня", "дней") + " назад. Автоматическое обновление могло не сработать, цифры устарели.";
+  box.hidden = !msg; text.textContent = msg;
+}
+
+/* ---------- digest ---------- */
+const currentDigest = () => S.digests.find((d) => d.date === S.sel) || S.digests[0] || null;
+
+function renderDigest(){
+  const d = currentDigest(); const sel = $("dgSel");
+  const has = !!d;
+  $("dgEmpty").hidden = has; $("dgPanel").hidden = !has;
+  sel.replaceChildren();
+  if (!has){
+    sel.append(h("option", {text: "нет отчётов"})); sel.disabled = true;
+    $("dgPrev").disabled = true; $("dgNext").disabled = true;
+    return;
+  }
+  for (const x of S.digests) sel.append(h("option", {value: x.date, text: longDate(x.date)}));
+  sel.value = d.date; sel.disabled = S.digests.length < 2;
+  const idx = S.digests.indexOf(d);
+  $("dgPrev").disabled = idx >= S.digests.length - 1;
+  $("dgNext").disabled = idx <= 0;
+
+  $("dgHeadline").textContent = d.headline || "Отчёт за " + longDate(d.date);
+  $("dgAsOf").textContent = d.asOf ? "Собрано: " + d.asOf : "";
+  $("dgAsOf").hidden = !d.asOf;
+  $("dgSummary").textContent = d.summary; $("dgSummary").hidden = !d.summary;
+
+  const table = $("dgTable");
+  while (table.tBodies.length) table.removeChild(table.tBodies[0]);
+  const groups = [];
+  for (const r of d.rows){
+    let g = groups.find((x) => x.name === r.group);
+    if (!g){ g = {name: r.group, rows: []}; groups.push(g); }
+    g.rows.push(r);
+  }
+  for (const g of groups){
+    const tb = h("tbody");
+    tb.append(h("tr", {class: "grp"}, h("th", {colspan: 3, scope: "colgroup", text: g.name})));
+    for (const r of g.rows){
+      const nameCell = h("td", null, r.name, r.stale ? [" ", h("span", {class: "pill", text: "не обновлено"})] : null);
+      tb.append(h("tr", {class: r.note ? "has-note" : null}, nameCell,
+        h("td", {class: "r", text: fmtLevel(r.level, r.unit)}),
+        h("td", {class: "r"}, chgNode(r.chg, r.chgText))));
+      if (r.note) tb.append(h("tr", {class: "note"}, h("td", {colspan: 3, text: r.note})));
+    }
+    table.append(tb);
+  }
+  if (!groups.length) table.append(h("tbody", null, h("tr", null, h("td", {colspan: 3, class: "muted", text: "В этом отчёте нет таблицы."}))));
+
+  $("dgWatch").replaceChildren(...d.watch.map((w) => h("li", {text: w})));
+  $("dgWatchBox").hidden = !d.watch.length;
+  $("dgCal").replaceChildren(...d.calendar.map((c) => h("li", null, h("span", {class: "t", text: c.time || "—"}), h("span", {text: c.text}))));
+  $("dgCalBox").hidden = !d.calendar.length;
+  $("dgCols").hidden = !d.watch.length && !d.calendar.length;
+  $("dgUs").textContent = d.us; $("dgUsBox").hidden = !d.us;
+  $("dgCrypto").textContent = d.crypto; $("dgCryptoBox").hidden = !d.crypto;
+  $("dgSrc").replaceChildren(...d.sources.map((x) => h("li", null,
+    x.url ? h("a", {href: x.url, target: "_blank", rel: "noopener noreferrer", text: x.title || x.url}) : x.title)));
+  $("dgSrcBox").hidden = !d.sources.length;
+}
+
+/* ---------- what-if control ---------- */
+function renderWhat(){
+  const dom = domain(); const rng = $("whatRange"), numEl = $("whatNum");
+  const now = btcNow();
+  if (!S.whatTouched){
+    if (now) S.what = Math.round(now.price / 100) * 100;
+    else if (dom) S.what = Math.round((dom.lo + dom.hi) / 200) * 100;
+  }
+  if (dom){ rng.min = String(dom.lo); rng.max = String(dom.hi); rng.disabled = false; }
+  else rng.disabled = true;
+  if (S.what != null){
+    rng.value = String(S.what);
+    if (document.activeElement !== numEl) numEl.value = String(S.what);
+  }
+  $("whatDelta").textContent = now && S.what ? pct((S.what / now.price - 1) * 100) + " к текущей " + usd(now.price) : "";
+
+  const chips = [];
+  if (now) chips.push(["Сейчас", Math.round(now.price)]);
+  for (const t of S.targets.slice(0, 8)) chips.push([kshort(t.price), t.price]);
+  for (const l of levelSet().levels.slice(0, 5)) chips.push([clip(l.name, 22), Math.round(l.value)]);
+  const sig = JSON.stringify(chips);
+  if (sig !== S.chipSig){
+    S.chipSig = sig;
+    $("whatChips").replaceChildren(...chips.map(([label, v]) => h("button", {type: "button", text: label, title: usd(v), onclick: () => setWhat(v)})));
+  }
+}
+function setWhat(v){ S.what = v; S.whatTouched = true; recalc(); }
+
+/* ---------- level map ---------- */
+function spread(items, gap, yMin, yMax){
+  items.sort((a, b) => a.y - b.y);
+  let prev = -Infinity;
+  for (const it of items){ it.ly = Math.max(it.y, prev + gap, yMin); prev = it.ly; }
+  let next = Infinity;
+  for (let i = items.length - 1; i >= 0; i--){ items[i].ly = Math.min(items[i].ly, next - gap, yMax); next = items[i].ly; }
+  return items;
+}
+function renderMap(){
+  const host = $("map"); const dom = domain();
+  host.replaceChildren();
+  if (!dom){
+    host.append(h("p", {class: "empty", text: "Карта появится вместе с отчётом: слева рыночные уровни и текущая цена, справа цели на покупку."}));
+    return;
+  }
+  const W = Math.max(260, Math.floor(host.clientWidth || 340)), H = 440, top = 26, bot = 26;
+  const ax = Math.round(W / 2);
+  const y = (v) => top + (dom.hi - Math.min(dom.hi, Math.max(dom.lo, v))) / (dom.hi - dom.lo) * (H - top - bot);
+  const now = btcNow(); const P = S.what;
+  const maxChars = Math.max(8, Math.floor((ax - 34) / 6));
+  const svg = s("svg", {viewBox: "0 0 " + W + " " + H, width: W, height: H, role: "img",
+    "aria-label": "Карта уровней BTC: слева рыночные уровни и текущая цена, справа цели на покупку и цена сценария. Те же числа есть в таблице ниже."});
+
+  if (now && P) svg.append(s("rect", {class: "mp-band", x: ax - 4, width: 8, y: Math.min(y(now.price), y(P)), height: Math.abs(y(now.price) - y(P))}));
+  svg.append(s("line", {class: "mp-axis", x1: ax, x2: ax, y1: 8, y2: H - 8}));
+  if (now) svg.append(s("line", {class: "mp-now", x1: 8, x2: W - 8, y1: y(now.price), y2: y(now.price)}));
+  if (P) svg.append(s("line", {class: "mp-what", x1: 8, x2: W - 8, y1: y(P), y2: y(P)}));
+
+  const left = levelSet().levels.map((l) => ({y: y(l.value), v: nf0.format(l.value), n: clip(l.name, maxChars), kind: "level"}));
+  if (now) left.push({y: y(now.price), v: nf0.format(now.price), n: "сейчас", kind: "now"});
+  const right = S.targets.map((t) => {
+    const hit = !!P && P <= t.price;
+    const state = hit ? (now && now.price <= t.price ? "цена уже ниже" : "сработает") : "ждёт";
+    return {y: y(t.price), v: nf0.format(t.price), n: clip((t.note || "цель") + " · " + state, maxChars), kind: "tier", hit};
+  });
+  if (P){
+    const out = P > dom.hi ? " ↑" : P < dom.lo ? " ↓" : "";
+    right.push({y: y(P), v: nf0.format(P) + out, n: "если", kind: "what"});
+  }
+  spread(left, 32, 16, H - 20); spread(right, 32, 16, H - 20);
+
+  for (const it of left){
+    if (it.kind === "level") svg.append(s("line", {class: "mp-tick", x1: ax - 9, x2: ax, y1: it.y, y2: it.y}));
+    svg.append(s("polyline", {class: "mp-lead", points: (ax - 11) + "," + it.y + " " + (ax - 22) + "," + it.ly + " " + (ax - 27) + "," + it.ly}));
+    svg.append(s("text", {class: "mp-v" + (it.kind === "now" ? " strong" : ""), x: ax - 31, y: it.ly - 1, "text-anchor": "end"}, it.v));
+    svg.append(s("text", {class: "mp-n", x: ax - 31, y: it.ly + 12, "text-anchor": "end"}, it.n));
+  }
+  for (const it of right){
+    svg.append(s("polyline", {class: "mp-lead", points: (ax + 11) + "," + it.y + " " + (ax + 22) + "," + it.ly + " " + (ax + 27) + "," + it.ly}));
+    svg.append(s("text", {class: "mp-v" + (it.kind === "what" ? " strong" : ""), x: ax + 31, y: it.ly - 1, "text-anchor": "start"}, it.v));
+    svg.append(s("text", {class: "mp-n", x: ax + 31, y: it.ly + 12, "text-anchor": "start"}, it.n));
+  }
+  for (const it of right) if (it.kind === "tier") svg.append(s("circle", {class: "mp-tier" + (it.hit ? " hit" : ""), cx: ax, cy: it.y, r: it.hit ? 6 : 5}));
+  if (now) svg.append(s("rect", {class: "mp-dnow", x: ax - 4.5, y: y(now.price) - 4.5, width: 9, height: 9, transform: "rotate(45 " + ax + " " + y(now.price) + ")"}));
+  if (P) svg.append(s("circle", {class: "mp-dwhat", cx: ax, cy: y(P), r: 6}));
+  host.append(svg);
+}
+function renderLevels(){
+  const set = levelSet(); const now = btcNow();
+  const odds = typeof S.touch === "function" && now ? S.touch : null;   // set by the live layer while option data is fresh
+  $("lvOddsH").hidden = !odds;
+  $("lvStamp").textContent = set.levels.length ? set.note || "" : "";
+  const tb = $("lvTable").tBodies[0]; tb.replaceChildren();
+  const rows = set.levels.map((l) => ({name: l.name, v: l.value, note: l.note, stale: l.stale, goal: false}))
+    .concat(S.targets.map((t) => ({name: "Цель на покупку", v: t.price, note: t.note, stale: false, goal: true})));
+  if (!rows.length){
+    tb.append(h("tr", null, h("td", {colspan: 3, class: "muted", text: "Уровни появятся вместе с отчётом."})));
+    return;
+  }
+  rows.sort((a, b) => b.v - a.v);
+  const share = (v) => v < 1 ? "<1%" : v > 99 ? ">99%" : Math.round(v) + "%";
+  for (const r of rows){
+    const o = odds ? odds(r.v) : null;
+    tb.append(h("tr", null,
+      h("td", null, r.goal ? [h("span", {class: "pill goal", text: "цель"}), " ", r.note || ""] : r.name,
+        r.stale ? [" ", h("span", {class: "pill", text: "устарело"})] : null,
+        !r.goal && r.note ? h("span", {class: "sub", text: r.note}) : null),
+      h("td", {class: "r"}, usd(r.v), now ? h("span", {class: "sub", text: pct((r.v / now.price - 1) * 100)}) : null),
+      odds ? h("td", {class: "r"}, o ? [share(o.d30), h("span", {class: "sub", text: "90 дней: " + share(o.d90)})] : "—") : null));
+  }
+}
+
+/* ---------- calculator ---------- */
+function renderResults(){
+  const P = S.what; const set = (id, v) => { $(id).textContent = v; };
+  if (document.activeElement !== $("budget")) $("budget").value = String(S.budget);
+  const pnl = $("rPnl"); pnl.classList.remove("up", "down");
+  if (!P || !S.targets.length){
+    for (const id of ["rFilled","rSpent","rBtc","rAvg","rPnl","rBack"]) set(id, "—");
+    for (const id of ["rFilledS","rSpentS","rBtcS","rAvgS","rPnlS","rBackS"]) set(id, "");
+    return;
+  }
+  const c = calc(P);
+  set("rFilled", c.filled + " из " + c.n);
+  set("rFilledS", "по " + usd(c.per) + " на каждую цель");
+  set("rSpent", usd(c.spent));
+  set("rSpentS", "останется " + usd(c.left) + " из " + usd(S.budget));
+  set("rBtc", c.btc > 0 ? btcf(c.btc) : "0");
+  set("rBtcS", c.btc > 0 ? "стоит " + usd(c.btc * P) + " при этой цене" : "при этой цене покупок нет");
+  set("rAvg", c.avg ? usd(c.avg) : "—");
+  set("rAvgS", c.avg ? "по сработавшим целям" : "ни одна цель не сработала");
+  if (c.pnl == null){ set("rPnl", "—"); set("rPnlS", "появится после первой цели"); }
+  else {
+    set("rPnl", (c.pnl > 0 ? "+" : "") + usd(Math.round(c.pnl)) + " (" + pct(c.pnlPct) + ")");
+    if (c.pnl > 0) pnl.classList.add("up"); else if (c.pnl < 0) pnl.classList.add("down");
+    set("rPnlS", "купленное при цене " + usd(P));
+  }
+  set("rBack", c.back != null ? pct(c.back) : c.avg ? "уже в плюсе" : "—");
+  set("rBackS", c.back != null ? "столько цене расти до средней " + usd(c.avg) : "");
+}
+function renderScenarios(){
+  const tb = $("scn").tBodies[0]; tb.replaceChildren();
+  const pts = []; const now = btcNow();
+  if (now) pts.push({v: Math.round(now.price), name: "сейчас"});
+  for (const t of S.targets) pts.push({v: t.price, name: "цель"});
+  for (const l of levelSet().levels) pts.push({v: Math.round(l.value), name: l.name});
+  if (!pts.length){
+    tb.append(h("tr", null, h("td", {colspan: 5, class: "muted", text: "Таблица заполнится вместе с отчётом."})));
+    return;
+  }
+  pts.sort((a, b) => b.v - a.v);
+  for (const p of pts){
+    const c = calc(p.v);
+    const res = h("span", {class: c.pnl > 0 ? "up" : c.pnl < 0 ? "down" : null, text: c.pnl == null ? "—" : pct(c.pnlPct)});
+    tb.append(h("tr", {class: S.what === p.v ? "is-what" : null},
+      h("td", null, h("button", {type: "button", class: "linkbtn", text: usd(p.v), "aria-label": "Показать сценарий " + usd(p.v), onclick: () => setWhat(p.v)}),
+        h("span", {class: "sub", text: p.name})),
+      h("td", {class: "r", text: c.n ? c.filled + " из " + c.n : "—"}),
+      h("td", {class: "r", text: c.btc > 0 ? btcf(c.btc) : "0"}),
+      h("td", {class: "r", text: c.avg ? usd(c.avg) : "—"}),
+      h("td", {class: "r"}, res)));
+  }
+}
+
+/* ---------- vault ---------- */
+function signTile(id, n, text){
+  const el = $(id); el.classList.remove("up", "down");
+  el.textContent = text;
+  if (n > 0) el.classList.add("up"); else if (n < 0) el.classList.add("down");
+}
+function renderVault(){
+  const vn = vaultNow();
+  $("vEmpty").hidden = !!vn; $("vPanel").hidden = !vn;
+  $("vStamp").textContent = vn && vn.v.at ? "данные Hyperliquid, обновлено в " + new Date(vn.v.at).toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit"}) : "";
+  if (vn){
+    const v = vn.v, money = (n) => n == null ? "" : (n > 0 ? "+" : "") + usdBig(n);
+    $("vName").textContent = v.name;
+    const link = $("vLink");
+    if (v.address){ link.href = "https://app.hyperliquid.xyz/vaults/" + v.address; link.hidden = false; } else link.hidden = true;
+    signTile("vD", v.ret1d, pct(v.ret1d)); $("vDS").textContent = money(v.pnl1d);
+    signTile("vW", v.ret1w, pct(v.ret1w)); $("vWS").textContent = money(v.pnl1w);
+    signTile("vM", v.ret1m, pct(v.ret1m));
+    $("vMS").textContent = [money(v.pnl1m), v.btc1m != null ? "биткойн за то же время " + pct(v.btc1m) : ""].filter(Boolean).join("; ");
+    signTile("vDD", v.dd1m, pct(v.dd1m));
+    signTile("vPnl", v.pnlAll, usdBig(v.pnlAll));
+    $("vVlm").textContent = usdBig(v.vlm1m);
+    const show = v.dep != null;
+    $("vWhoBox").hidden = !show;
+    if (show){
+      $("vDep").textContent = usdBig(v.dep);
+      signTile("vDepRet", v.depRet, pct(v.depRet));
+      $("vDepRetS").textContent = (v.pnlAll < 0 ? "убыток " : "прибыль ") + usdBig(Math.abs(v.pnlAll)) + " на " + usdBig(v.dep) + " внесённых";
+      const w = v.who;
+      $("vWho").textContent = w ? w.up + " из " + w.n : "—";
+      $("vWhoS").textContent = w ? "медианный результат " + pct(w.med) + "; из тех, кого показывает Hyperliquid" : "список вкладчиков не загрузился";
+      const fm = v.flow1m, flow = (n) => (n > 0 ? "+" : "") + (Math.abs(n) >= 1e6 ? usdBig(n) : (n < 0 ? "−$" : "$") + nf0.format(Math.abs(n) / 1e3) + " тыс.");
+      $("vFlow").textContent = fm == null ? "—" : flow(fm);
+      $("vFlowS").textContent = fm == null ? "" : (fm > 0 ? "внесли больше, чем вывели" : fm < 0 ? "вывели больше, чем внесли" : "вводы равны выводам")
+        + (v.flow1w != null ? "; за неделю " + flow(v.flow1w) : "");
+      $("vWhoNote").textContent = "Результат вкладчика: его прибыль или убыток к деньгам, которые он внёс."
+        + (w ? " Лучший из " + w.n + ": " + pct(w.best) + ", худший: " + pct(w.worst) + (w.days != null ? "; половина держит деньги в вольте дольше " + Math.round(w.days) + " " + plural(Math.round(w.days), "дня", "дней", "дней") + "." : ".") : "")
+        + " Вводы и выводы: изменение счёта вольта, которое не объясняется прибылью или убытком.";
+    }
+    $("vNote").textContent = "Доходность посчитана по истории счёта вольта на Hyperliquid: прибыль каждого отрезка делится на деньги, которые были в вольте в его начале, поэтому вводы и выводы вкладчиков её не искажают."
+      + (v.fee != null ? " Комиссия управляющего: " + pct(v.fee * 100, 0).replace("+", "") + " с прибыли." : "");
+  }
+
+  const mv = S.vMove;
+  if (document.activeElement !== $("vAmt")) $("vAmt").value = String(S.vAmt);
+  if (document.activeElement !== $("vMoveNum")) $("vMoveNum").value = String(mv);
+  $("vMove").value = String(Math.max(-100, Math.min(100, mv)));
+  const after = S.vAmt * (1 + mv / 100);
+  $("vOut").textContent = usd(S.vAmt) + " превратятся в " + usd(after);
+  $("vOutS").textContent = mv > 0 ? "После комиссии управляющего (10% с прибыли) останется " + usd(S.vAmt + (after - S.vAmt) * 0.9) + "." : mv < 0 ? "Убыток " + usd(S.vAmt - after) + "." : "";
+  const chips = [["ликвидация, −100%", -100]];
+  if (vn && vn.v.dd1m != null && vn.v.dd1m < 0) chips.push(["как просадка за месяц, " + pct(vn.v.dd1m, 0), Math.round(vn.v.dd1m)]);
+  chips.push(["без изменений", 0]);
+  if (vn && vn.v.ret1m != null && vn.v.ret1m < 0 && vn.v.ret1m > -99) chips.push(["отыграть месяц", Math.round((1 / (1 + vn.v.ret1m / 100) - 1) * 100)]);
+  const sig = JSON.stringify(chips);
+  if (sig !== S.vChipSig){
+    S.vChipSig = sig;
+    $("vChips").replaceChildren(...chips.map(([label, val]) => h("button", {type: "button", text: label, onclick: () => { S.vMove = val; renderVault(); }})));
+  }
+}
+
+/* ---------- history ---------- */
+const HKEYS = ["btc","vault","nq","es","kospi","taiex","tsmc","nikkei","hstech","usdjpy","dxy","us10y","gold","oil"];
+function seriesList(){
+  const map = new Map();
+  for (const d of S.digests.slice().reverse()){
+    const seen = new Set();
+    if (d.vault && d.vault.sharePrice){
+      if (!map.has("vault")) map.set("vault", {key: "vault", name: "", unit: "p3", pts: []});
+      const x = map.get("vault"); x.name = "Пай " + d.vault.name; x.pts.push({date: d.date, v: d.vault.sharePrice});
+      seen.add("vault");
+    }
+    for (const r of d.rows){
+      if (!r.key || r.level == null || r.stale || seen.has(r.key)) continue;
+      seen.add(r.key);
+      if (!map.has(r.key)) map.set(r.key, {key: r.key, name: r.name, unit: r.unit, pts: []});
+      const x = map.get(r.key); x.name = r.name; x.unit = r.unit; x.pts.push({date: d.date, v: r.level});
+    }
+  }
+  const order = (k) => { const i = HKEYS.indexOf(k); return i < 0 ? 99 : i; };
+  return [...map.values()].sort((a, b) => order(a.key) - order(b.key));
+}
+function niceTicks(lo, hi, n){
+  const raw = (hi - lo) / n; const mag = Math.pow(10, Math.floor(Math.log10(raw))); const norm = raw / mag;
+  const step = (norm < 1.5 ? 1 : norm < 3.5 ? 2 : norm < 7.5 ? 5 : 10) * mag;
+  const out = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + step * 1e-6; v += step) out.push(+v.toPrecision(12));
+  return out;
+}
+function drawChart(plot, srs){
+  const pts = srs.pts; const W = Math.max(220, Math.floor(plot.clientWidth || 280)), H = 140;
+  const m = {l: 48, r: 12, t: 10, b: 22};
+  let lo = Math.min(...pts.map((p) => p.v)), hi = Math.max(...pts.map((p) => p.v));
+  if (lo === hi){ lo = lo * 0.99 - 1e-9; hi = hi * 1.01 + 1e-9; }
+  const pad = (hi - lo) * 0.14; lo -= pad; hi += pad;
+  const t0 = parseDate(pts[0].date).getTime(), t1 = parseDate(pts[pts.length - 1].date).getTime();
+  const X = (p) => m.l + (W - m.l - m.r) * (t1 === t0 ? 0.5 : (parseDate(p.date).getTime() - t0) / (t1 - t0));
+  const Y = (v) => m.t + (H - m.t - m.b) * (1 - (v - lo) / (hi - lo));
+  const tickFmt = (v) => hi >= 10000 ? kshort(v) : srs.unit === "p3" ? nf3.format(v) : nf2.format(v);
+  const svg = s("svg", {viewBox: "0 0 " + W + " " + H, width: W, height: H, "aria-hidden": "true"});
+  for (const tv of niceTicks(lo, hi, 3)){
+    svg.append(s("line", {class: "ch-grid", x1: m.l, x2: W - m.r, y1: Y(tv), y2: Y(tv)}));
+    svg.append(s("text", {class: "ch-tick", x: m.l - 6, y: Y(tv) + 3.5, "text-anchor": "end"}, tickFmt(tv)));
+  }
+  svg.append(s("line", {class: "ch-base", x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b}));
+  const xy = pts.map((p) => [X(p), Y(p.v)]);
+  const line = xy.map((q, i) => (i ? "L" : "M") + q[0].toFixed(1) + " " + q[1].toFixed(1)).join(" ");
+  svg.append(s("path", {class: "ch-area", d: line + " L" + xy[xy.length - 1][0].toFixed(1) + " " + (H - m.b) + " L" + xy[0][0].toFixed(1) + " " + (H - m.b) + " Z"}));
+  svg.append(s("path", {class: "ch-line", d: line}));
+  svg.append(s("text", {class: "ch-tick", x: m.l, y: H - 6, "text-anchor": "start"}, shortDate(pts[0].date)));
+  svg.append(s("text", {class: "ch-tick", x: W - m.r, y: H - 6, "text-anchor": "end"}, shortDate(pts[pts.length - 1].date)));
+  const cross = s("line", {class: "ch-cross", y1: m.t, y2: H - m.b, x1: 0, x2: 0, visibility: "hidden"});
+  const last = xy.length - 1;
+  const dot = s("circle", {class: "ch-dot", r: 4.5, cx: xy[last][0], cy: xy[last][1]});
+  svg.append(cross, dot);
+  const tip = h("div", {class: "tip", hidden: true}, h("b"), h("span"));
+  plot.replaceChildren(svg, tip);
+
+  let idx = -1;
+  function show(i){
+    idx = Math.max(0, Math.min(last, i));
+    const q = xy[idx]; const scale = (svg.getBoundingClientRect().width || W) / W;
+    cross.setAttribute("x1", q[0]); cross.setAttribute("x2", q[0]); cross.setAttribute("visibility", "visible");
+    dot.setAttribute("cx", q[0]); dot.setAttribute("cy", q[1]);
+    tip.firstChild.textContent = fmtLevel(pts[idx].v, srs.unit);
+    tip.lastChild.textContent = longDate(pts[idx].date);
+    tip.hidden = false;
+    const flip = q[0] > W * 0.6;
+    tip.style.left = (q[0] * scale + (flip ? -10 : 10)) + "px";
+    tip.style.transform = flip ? "translateX(-100%)" : "none";
+    tip.style.top = Math.max(0, q[1] * scale - 46) + "px";
+  }
+  function hide(){
+    idx = -1; tip.hidden = true; cross.setAttribute("visibility", "hidden");
+    dot.setAttribute("cx", xy[last][0]); dot.setAttribute("cy", xy[last][1]);
+  }
+  plot.onpointermove = (e) => {
+    const r = svg.getBoundingClientRect(); const px = (e.clientX - r.left) * (W / (r.width || W));
+    let best = 0, bd = Infinity;
+    xy.forEach((q, i) => { const d = Math.abs(q[0] - px); if (d < bd){ bd = d; best = i; } });
+    show(best);
+  };
+  plot.onpointerleave = hide;
+  plot.onfocus = () => show(last);
+  plot.onblur = hide;
+  plot.onkeydown = (e) => {
+    if (e.key === "ArrowLeft"){ show((idx < 0 ? last : idx) - 1); e.preventDefault(); }
+    else if (e.key === "ArrowRight"){ show((idx < 0 ? last : idx) + 1); e.preventDefault(); }
+  };
+}
+function renderHistory(force){
+  const all = seriesList();
+  const sig = JSON.stringify(all);
+  if (!force && sig === S.histSig) return;
+  S.histSig = sig;
+  const multi = all.filter((x) => x.pts.length >= 2);
+  const grid = $("charts"); grid.replaceChildren();
+  $("hsEmpty").hidden = multi.length > 0;
+  grid.hidden = multi.length === 0;
+  const jobs = [];
+  for (const srs of multi){
+    const first = srs.pts[0], lastP = srs.pts[srs.pts.length - 1];
+    const plot = h("div", {class: "plot", tabindex: "0", role: "img",
+      "aria-label": srs.name + ": " + srs.pts.length + " " + plural(srs.pts.length, "точка", "точки", "точек") + ", последнее значение " + fmtLevel(lastP.v, srs.unit) + ". Стрелки влево и вправо листают дни."});
+    grid.append(h("div", {class: "chart"},
+      h("div", {class: "chart-head"}, h("span", {class: "chart-name", text: srs.name}), h("span", {class: "chart-val", text: fmtLevel(lastP.v, srs.unit)})),
+      h("div", {class: "chart-sub", text: pct((lastP.v / first.v - 1) * 100) + " с " + shortDate(first.date) + " · " + srs.pts.length + " " + plural(srs.pts.length, "точка", "точки", "точек")}),
+      plot));
+    jobs.push([plot, srs]);
+  }
+  for (const [plot, srs] of jobs) drawChart(plot, srs);
+
+  const days = S.digests.length;
+  $("hsNote").textContent = days ? "В архиве " + days + " " + plural(days, "отчёт", "отчёта", "отчётов") + (all.length && !multi.length ? ", пока по одной точке на инструмент" : "") : "";
+
+  const box = $("hsTableBox"), table = $("hsTable");
+  box.hidden = all.length === 0;
+  table.replaceChildren();
+  if (all.length){
+    table.append(h("thead", null, h("tr", null, h("th", {text: "Дата"}), ...all.map((x) => h("th", {class: "r", text: x.name})))));
+    const tb = h("tbody");
+    for (const d of S.digests){
+      tb.append(h("tr", null, h("td", {text: longDate(d.date)}), ...all.map((x) => {
+        const p = x.pts.find((q) => q.date === d.date);
+        return h("td", {class: "r", text: p ? fmtLevel(p.v, x.unit) : "—"});
+      })));
+    }
+    table.append(tb);
+  }
+}
+
+/* ---------- orchestration ---------- */
+function recalc(){ renderHero(); renderWhat(); renderMap(); renderLevels(); renderResults(); renderScenarios(); }
+function renderAll(){ renderStatus(); renderDigest(); recalc(); renderVault(); }
+
+async function load(){
+  S.load = "loading"; renderStatus();
+  try {
+    const r = await fetch("data.json", {cache: "no-store"});
+    if (!r.ok) throw new Error("http " + r.status);
+    const d = await r.json();
+    S.targets = arr(d && d.targets, 12).filter((t) => t && typeof t === "object" && numv(t.price) > 0)
+      .map((t) => ({price: t.price, note: str(t.note, 40)})).sort((a, b) => b.price - a.price);
+    S.digests = (Array.isArray(d && d.digests) ? d.digests.slice(-800) : []).map(normDigest).filter(Boolean)
+      .sort((a, b) => a.date < b.date ? 1 : -1);
+    S.load = "ok";
+  } catch (e){ S.load = "error"; }
+  renderAll();
+}
+
+/* ---------- wiring ---------- */
+$("retry").addEventListener("click", load);
+$("dgSel").addEventListener("change", (e) => { S.sel = e.target.value; renderDigest(); });
+$("dgPrev").addEventListener("click", () => { const i = S.digests.indexOf(currentDigest()); if (i < S.digests.length - 1){ S.sel = S.digests[i + 1].date; renderDigest(); } });
+$("dgNext").addEventListener("click", () => { const i = S.digests.indexOf(currentDigest()); if (i > 0){ S.sel = S.digests[i - 1].date; renderDigest(); } });
+$("whatRange").addEventListener("input", (e) => { S.what = +e.target.value; S.whatTouched = true; recalc(); });
+$("whatNum").addEventListener("input", (e) => { const v = toNum(e.target.value); if (v > 0){ S.what = v; S.whatTouched = true; recalc(); } });
+$("budget").addEventListener("input", (e) => { S.budget = toNum(e.target.value); lsSet("desk.budget", S.budget); renderResults(); renderScenarios(); });
+$("vAmt").addEventListener("input", (e) => { S.vAmt = toNum(e.target.value); lsSet("desk.vamt", S.vAmt); renderVault(); });
+$("vMove").addEventListener("input", (e) => { S.vMove = +e.target.value; renderVault(); });
+$("vMoveNum").addEventListener("input", (e) => {
+  const n = parseFloat(String(e.target.value).replace(",", "."));
+  if (isFinite(n)){ S.vMove = Math.max(-100, Math.min(1000, n)); renderVault(); }
+});
+for (const b of document.querySelectorAll(".jump button")){
+  b.addEventListener("click", () => {
+    const el = $(b.dataset.go); if (!el) return;
+    const calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({behavior: calm ? "auto" : "smooth", block: "start"});
+  });
+}
+let rz = 0, lastW = window.innerWidth;
+window.addEventListener("resize", () => {
+  if (window.innerWidth === lastW) return;
+  lastW = window.innerWidth;
+  cancelAnimationFrame(rz);
+  rz = requestAnimationFrame(() => { renderMap(); });
+});
+
+renderAll();
+load();
+})();
+</script>
