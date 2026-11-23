@@ -717,14 +717,14 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 }
 .panel,.top > .tiles .tile,.sec.folded > .sec-head,.mast{
   background:linear-gradient(var(--surface), var(--surface)) padding-box,
-    linear-gradient(150deg, var(--edge-hi) 0, var(--edge-lo) 30%, var(--edge-lo) 70%, var(--edge-warm) 100%) border-box;
+    var(--rim) border-box;
   box-shadow:0 0 0 3px var(--mat), inset 0 1px 0 var(--sheen),
     -12px -12px 34px -20px var(--halo-a), 12px 14px 36px -20px var(--halo-b), var(--plate-shadow)}
 .mast{background:
     radial-gradient(80% 170% at 100% 100%, var(--cover-warm), transparent 62%) padding-box,
     radial-gradient(60% 150% at 0 0, var(--cover-cool), transparent 64%) padding-box,
     linear-gradient(180deg, var(--cover-a), var(--cover-b)) padding-box,
-    linear-gradient(150deg, var(--edge-hi) 0, var(--edge-lo) 30%, var(--edge-lo) 70%, var(--edge-warm) 100%) border-box}
+    var(--rim) border-box}
 .hero{
   background:
     radial-gradient(560px 280px at 0 0, color-mix(in srgb, var(--brand) 15%, transparent), transparent 70%) padding-box,
@@ -741,6 +741,11 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
     -14px -14px 40px -18px var(--halo-a), 14px 16px 42px -18px var(--halo-b), var(--plate-shadow)}
 }
 @media (prefers-reduced-motion: reduce){.hero{animation:none} .panel,.top > .tiles .tile{transition:none}}
+
+/* the rim is one gradient, the colours of a dawn: night blue, violet, rose, the orange of the sun */
+:root{--rim:linear-gradient(135deg, rgba(42,120,214,.7) 0, rgba(112,92,220,.34) 36%, rgba(226,92,116,.34) 64%, rgba(247,147,26,.9) 100%)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--rim:linear-gradient(135deg, rgba(100,168,255,.95) 0, rgba(150,122,255,.5) 36%, rgba(255,118,140,.5) 64%, rgba(255,164,54,.95) 100%)}}
+:root[data-theme="dark"]{--rim:linear-gradient(135deg, rgba(100,168,255,.95) 0, rgba(150,122,255,.5) 36%, rgba(255,118,140,.5) 64%, rgba(255,164,54,.95) 100%)}
 </style>
 </head>
 <body>
