@@ -237,6 +237,9 @@ img{max-width:100%}
 .chart-panel.expanded #lwNote{display:none}
 body.noscroll{overflow:hidden}
 .chart-ctl{display:flex;flex-wrap:wrap;gap:8px 12px}
+.tvbox.lw-tv{height:520px}
+@media (min-width:760px){.tvbox.lw-tv{height:640px}}
+.chart-panel.expanded .tvbox.lw-tv{flex:1;min-height:0;height:auto}
 </style>
 </head>
 <body>
@@ -297,6 +300,7 @@ body.noscroll{overflow:hidden}
         <div class="seg" id="mk" role="group" aria-label="Рынок">
           <button type="button" data-mk="spot" aria-pressed="true">Спот</button>
           <button type="button" data-mk="perp" aria-pressed="false">Перп</button>
+          <button type="button" data-mk="tv" aria-pressed="false">TradingView</button>
         </div>
         <div class="seg" id="tf" role="group" aria-label="Интервал свечей">
           <button type="button" data-tf="1m" aria-pressed="false">1м</button>
@@ -310,7 +314,8 @@ body.noscroll{overflow:hidden}
         </div>
         <button type="button" class="btn" id="expand">Развернуть</button>
       </div>
-      <div class="lw-wrap"><div class="lw" id="lw"></div><div class="lw-legend" id="lwLegend"></div></div>
+      <div class="lw-wrap" id="lwWrap"><div class="lw" id="lw"></div><div class="lw-legend" id="lwLegend"></div></div>
+      <div class="tvbox lw-tv" id="tvBtc" hidden><p>График TradingView загружается. Если он не появился, виджет заблокирован браузером или расширением.</p></div>
       <p class="hint" id="lwNote">Загружаю свечи с Hyperliquid…</p>
     </div>
   </section>
@@ -1480,9 +1485,22 @@ function initTv(){
 for (const b of document.querySelectorAll("#tf button")){
   b.addEventListener("click", () => { tf = b.dataset.tf; try { localStorage.setItem("desk.tf", tf); } catch (e){} loadCandles(); });
 }
-for (const b of document.querySelectorAll("#mk button")){
-  b.addEventListener("click", () => { mkt = b.dataset.mk; try { localStorage.setItem("desk.mkt", mkt); } catch (e){} loadCandles(); });
+let tvBtcDone = false;
+function setView(v){
+  const isTv = v === "tv";
+  try { localStorage.setItem("desk.view", v); } catch (e){}
+  $("lwWrap").hidden = isTv; $("tf").hidden = isTv; $("tvBtc").hidden = !isTv;
+  if (!isTv){ mkt = v; try { localStorage.setItem("desk.mkt", mkt); } catch (e){} loadCandles(); return; }
+  for (const b of document.querySelectorAll("#mk button")) b.setAttribute("aria-pressed", String(b.dataset.mk === "tv"));
+  $("mkNote").textContent = "TradingView, Binance BTC/USDT";
+  $("lwNote").textContent = "Виджет TradingView: индикаторы сверху, инструменты рисования слева, инструмент меняется в поиске. Цели и рыночные уровни на нём не рисуются, они есть на графике Hyperliquid (кнопки «Спот» и «Перп»).";
+  if (!tvBtcDone){
+    tvBtcDone = true;
+    tv("tvBtc", "embed-widget-advanced-chart.js", {autosize: true, symbol: "BINANCE:BTCUSDT", interval: "D", timezone: "Europe/Warsaw", theme: dark() ? "dark" : "light", style: "1", locale: "ru",
+      allow_symbol_change: true, hide_side_toolbar: false, withdateranges: true, calendar: false, support_host: "https://www.tradingview.com"});
+  }
 }
+for (const b of document.querySelectorAll("#mk button")) b.addEventListener("click", () => setView(b.dataset.mk));
 $("expand").addEventListener("click", () => setExpanded(!expanded));
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && expanded) setExpanded(false); });
 S.onData = drawLines;
@@ -1490,6 +1508,7 @@ if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEven
   if (chart){ chart.applyOptions(chartOpts()); series.applyOptions(candleOpts()); drawLines(); }
   if (pnlChart) pnlChart.applyOptions(chartOpts());
   tvDone = false; initTv();
+  if (tvBtcDone){ tvBtcDone = false; if (!$("tvBtc").hidden) setView("tv"); }
 });
 if ("IntersectionObserver" in window){
   const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)){ io.disconnect(); initTv(); } }, {rootMargin: "600px"});
@@ -1500,6 +1519,7 @@ D.chartState = () => ({tf, mkt, bars: data.length, wsOpen, noMore, first: data[0
 D.loadMore = loadMore;
 renderLive();
 tick(); loadCandles(); loadVault(); wsConnect();
+try { if (localStorage.getItem("desk.view") === "tv") setView("tv"); } catch (e){}
 setInterval(tick, 15000);
 setInterval(() => { if (!wsOpen) refreshTail(); }, 15000);
 setInterval(loadVault, 60000);
