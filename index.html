@@ -1590,28 +1590,53 @@ function renderFolders(){
     return b;
   }));
   $("foldItems").scrollTop = 0; $("foldItems").scrollLeft = 0;
-  paintQuotes();
+  paintQuotes(); loadOpens();
 }
-/* live 24h change for the side list, from Hyperliquid perps: the main venue for crypto, the xyz venue for stocks, indices, commodities and FX */
-const Q = {};
+/* live change of the current daily candle for the side list, from Hyperliquid perps:
+   the main venue for crypto, the xyz venue for stocks, indices, commodities and FX */
+const Q = {}, OPEN = {};
+const utcDay = () => Math.floor(Date.now() / 864e5);
 function paintQuotes(){
+  const day = utcDay();
   for (const el of document.querySelectorAll("#foldItems .tk-q[data-h]")){
-    const q = Q[el.dataset.h];
+    const q = Q[el.dataset.h], o = OPEN[el.dataset.h];
     el.classList.remove("up", "down");
-    if (!q){ el.textContent = "…"; continue; }
-    const ch = (q.px / q.prev - 1) * 100;
+    if (!q || !o || o.day !== day){ el.textContent = "…"; el.removeAttribute("title"); continue; }
+    const ch = (q.px / o.o - 1) * 100;
     el.textContent = (ch > 0 ? "▲ " : ch < 0 ? "▼ " : "") + pct(ch, 2);
-    el.title = "За 24 часа, перп " + el.dataset.h + " на Hyperliquid, цена " + nf2.format(q.px);
+    el.title = "Дневная свеча с 00:00 UTC, перп " + el.dataset.h + " на Hyperliquid: открытие " + nf2.format(o.o) + ", сейчас " + nf2.format(q.px);
     if (ch > 0) el.classList.add("up"); else if (ch < 0) el.classList.add("down");
   }
 }
+let opensBusy = false;
+async function loadOpens(){
+  if (opensBusy || !WL.length || document.hidden) return;
+  const day = utcDay();
+  const need = WL[fIdx].items.map((it) => it.h).filter((x) => x && !(OPEN[x] && OPEN[x].day === day));
+  if (!need.length) return;
+  opensBusy = true;
+  try {
+    for (let i = 0; i < need.length; i += 4){
+      await Promise.all(need.slice(i, i + 4).map(async (coinName) => {
+        try {
+          const now = Date.now();
+          const rows = await hl({type: "candleSnapshot", req: {coin: coinName, interval: "1d", startTime: now - 3 * 864e5, endTime: now}});
+          const last = rows.sort((a, b) => a.t - b.t).pop();
+          if (last && Math.floor(last.t / 864e5) === day && +last.o > 0) OPEN[coinName] = {day, o: +last.o};
+        } catch (e){}
+      }));
+      paintQuotes();
+    }
+  } finally { opensBusy = false; }
+}
 async function pollQuotes(){
   if (document.hidden || !WL.length) return;
-  const take = (res, prefix) => { const [m, c] = res; m.universe.forEach((u, i) => { const px = +(c[i].markPx || c[i].midPx), prev = +c[i].prevDayPx; if (px > 0 && prev > 0) Q[prefix && !u.name.includes(":") ? prefix + ":" + u.name : u.name] = {px, prev}; }); };
+  const take = (res, prefix) => { const [m, c] = res; m.universe.forEach((u, i) => { const px = +(c[i].markPx || c[i].midPx); if (px > 0) Q[prefix && !u.name.includes(":") ? prefix + ":" + u.name : u.name] = {px}; }); };
   const jobs = [hl({type: "metaAndAssetCtxs"}).then((r) => take(r, "")), hl({type: "metaAndAssetCtxs", dex: "xyz"}).then((r) => take(r, "xyz"))];
   await Promise.all(jobs.map((p) => p.catch(() => {})));
   paintQuotes();
-  $("tkNote").textContent = Object.keys(Q).length ? "Проценты: изменение за 24 часа по перпам Hyperliquid, обновлено в " + clock(Date.now()) + ". Прочерк: такого рынка там нет." : "Проценты с Hyperliquid сейчас не загрузились.";
+  loadOpens();
+  $("tkNote").textContent = Object.keys(Q).length ? "Проценты: изменение с открытия текущей дневной свечи (00:00 UTC) по перпам Hyperliquid, обновлено в " + clock(Date.now()) + ". Прочерк: такого рынка там нет." : "Проценты с Hyperliquid сейчас не загрузились.";
 }
 const tvTheme = () => dark() ? "dark" : "light";
 function showChart(){
@@ -1670,6 +1695,7 @@ if ("IntersectionObserver" in window){
 
 D.chartState = () => ({tf, mkt, bars: data.length, wsOpen, noMore, first: data[0] && data[0].time, last: data[data.length - 1], range: chart ? chart.timeScale().getVisibleLogicalRange() : null});
 D.loadMore = loadMore;
+D.opens = () => OPEN;
 D.watch = () => ({folders: WL.map((f) => f.name + ":" + f.items.length), fIdx, cur: WL.length ? curSym() : null, tvDone});
 renderLive();
 tick(); loadCandles(); loadVault(); wsConnect();
@@ -1678,7 +1704,7 @@ setInterval(tick, 15000);
 setInterval(() => { if (!wsOpen) refreshTail(); }, 15000);
 setInterval(loadVault, 60000);
 watchReady.then(pollQuotes);
-setInterval(pollQuotes, 6000);
+setInterval(pollQuotes, 8000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden){ tick(); refreshTail(); loadVault(); pollQuotes(); } });
 })();
 </script>
