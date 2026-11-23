@@ -740,7 +740,7 @@ body.noscroll{overflow:hidden}
   </section>
 
   <footer>
-Цена, график, фандинг и все цифры вольта приходят с Hyperliquid в реальном времени, реализованная и balanced price раз в несколько часов обновляются по графикам Bitbo, графики рынков и календарь показывает TradingView, потоки ETF приходят с SoSoValue и The Block, вероятности по заседаниям ФРС раз в час обновляются с биржи прогнозов Kalshi, текущая ставка берётся из данных ФРС (FRED), ставки на ближайшее решение идут с рынка исходов Hyperliquid. Утренний отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
+Цена, график, фандинг и все цифры вольта приходят с Hyperliquid в реальном времени, реализованная цена и 200-недельная средняя раз в несколько часов обновляются по данным Woocharts и BGeometrics, графики рынков и календарь показывает TradingView, потоки ETF приходят с SoSoValue и The Block, вероятности по заседаниям ФРС раз в час обновляются с биржи прогнозов Kalshi, текущая ставка берётся из данных ФРС (FRED), ставки на ближайшее решение идут с рынка исходов Hyperliquid. Утренний отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
   </footer>
 </div>
 
@@ -2129,14 +2129,15 @@ function renderFed(){
   $("fdSchedNote").replaceChildren("Даты: ", link("календарь ФРС", CAL ? CAL.calUrl : ""), ". Решение объявляют во второй день в 14:00 по Нью-Йорку, время в таблице местное, даты 2027 года предварительные.");
 }
 
-/* ---------- market levels: realized and balanced price (levels.json, refreshed by the GitHub job from Bitbo's free charts)
+/* ---------- market levels: realized price and the 200-week average (levels.json, refreshed by the GitHub job)
    and the 52-week low from Hyperliquid's daily candles. Nothing here comes from the morning report. ---------- */
-const LV_NAMES = {realized: "Реализованная цена", balanced: "Balanced price"};
+const LV_NAMES = {wma200: "200-недельная средняя", realized: "Реализованная цена"};
 let lvFeed = null, lvLow = null;
 function applyLevels(){
   const out = [];
   if (lvLow) out.push({key: "low52w", name: "Минимум за год", value: lvLow, note: "по свечам Hyperliquid", stale: false});
-  const feed = lvFeed && Date.now() - lvFeed.updated < 10 * 864e5 ? lvFeed.levels : [];   // a feed that stopped hides itself
+  const old = isoOf(Date.now() - 14 * 864e5);
+  const feed = lvFeed ? lvFeed.levels.filter((l) => l.asOf >= old) : [];   // a value that stopped updating hides itself
   for (const l of feed) out.push({key: l.key, name: LV_NAMES[l.key], value: l.value, note: "на " + isoDay(l.asOf) + (l.src ? ", " + l.src : ""), stale: false});
   out.sort((a, b) => b.value - a.value);
   const parts = feed.map((l) => LV_NAMES[l.key].toLowerCase() + " на " + isoDay(l.asOf) + (l.src ? " (" + l.src + ")" : ""));
