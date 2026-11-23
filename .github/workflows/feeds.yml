@@ -1,8 +1,9 @@
 name: Обновление данных
 
-# Keeps the Fed block fresh without anyone's computer: odds for each meeting (Kalshi) and the
-# current target range (FRED). The hourly result goes to the "data" branch, which the site reads;
-# a copy is committed to main about once a day.
+# Keeps the data the site cannot fetch from a browser fresh, without anyone's computer:
+# fed.json (odds for each Fed meeting from Kalshi, the target range from FRED) and
+# levels.json (bitcoin's realized and balanced price from Bitbo's free charts).
+# The hourly result goes to the "data" branch, which the site reads; a copy is committed to main about once a day.
 on:
   schedule:
     - cron: "17 * * * *"
@@ -31,17 +32,19 @@ jobs:
         run: |
           echo "MAIN_STAMP=$(python3 -c "import json; print(json.load(open('fed.json')).get('updated') or '')" 2>/dev/null || true)" >> "$GITHUB_ENV"
           if git fetch --quiet --depth=1 origin data 2>/dev/null; then
-            git show FETCH_HEAD:fed.json > "$RUNNER_TEMP/prev.json" 2>/dev/null && cp "$RUNNER_TEMP/prev.json" fed.json || true
+            for f in fed.json levels.json; do
+              git show "FETCH_HEAD:$f" > "$RUNNER_TEMP/$f" 2>/dev/null && cp "$RUNNER_TEMP/$f" "$f" || true
+            done
           fi
-      - name: Обновить fed.json
+      - name: Обновить данные
         run: python3 tools/feeds.py
       - name: Опубликовать в ветке data
         run: |
           python3 -c "import json; json.load(open('fed.json'))"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          blob=$(git hash-object -w fed.json)
-          tree=$(printf '100644 blob %s\tfed.json\n' "$blob" | git mktree)
+          test -s levels.json && python3 -c "import json; json.load(open('levels.json'))"
+          tree=$(for f in fed.json levels.json; do test -s "$f" && printf '100644 blob %s\t%s\n' "$(git hash-object -w "$f")" "$f"; done | git mktree)
           commit=$(git commit-tree "$tree" -m "Данные: $(date -u +%FT%H:%MZ)")
           git push --quiet --force origin "$commit:refs/heads/data"
       - name: Раз в сутки сохранить копию в main
@@ -59,11 +62,12 @@ jobs:
             echo "Копия в main свежая"
             exit 0
           fi
-          if git diff --quiet -- fed.json; then
+          test -s levels.json && git add levels.json
+          git add fed.json
+          if git diff --cached --quiet; then
             echo "Изменений нет"
             exit 0
           fi
-          git add fed.json
-          git commit --quiet -m "Данные ФРС: $(date -u +%F)"
+          git commit --quiet -m "Данные: $(date -u +%F)"
           git pull --quiet --rebase origin main
           git push --quiet origin HEAD:main

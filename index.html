@@ -287,7 +287,6 @@ body.noscroll{overflow:hidden}
   #fed{order:5}
   #ladder{order:6}
   #vault{order:7}
-  #history{order:8}
   .page > footer{order:9}
   #today #dgPanel{max-height:calc(var(--chart-h) + 118px);overflow:auto}
   .top{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:12px 16px}
@@ -414,7 +413,7 @@ body.noscroll{overflow:hidden}
         <div class="stat-s" id="hNextSub"></div>
       </div>
       <div class="stat">
-        <div class="lab">Вольт, цена пая</div>
+        <div class="lab">Вольт за месяц</div>
         <div class="stat-v" id="hVault">—</div>
         <div class="stat-s" id="hVaultSub"></div>
       </div>
@@ -436,7 +435,6 @@ body.noscroll{overflow:hidden}
       <button type="button" data-go="today">Утренний отчёт</button>
       <button type="button" data-go="ladder">Уровни и цели</button>
       <button type="button" data-go="vault">Вольт</button>
-      <button type="button" data-go="history">История</button>
     </nav>
 
     <div class="banner" id="status" role="status" hidden><span id="statusText"></span><button type="button" class="btn" id="retry" hidden>Повторить</button></div>
@@ -483,7 +481,7 @@ body.noscroll{overflow:hidden}
       </div>
     </div>
     <div class="panel" id="dgEmpty">
-      <p class="empty">Здесь выходит утренний отчёт: Азия, фьючерсы США, доллар и ставки, золото и нефть, биткойн, календарь дня. Он обновляется по будням около 08:00 по Варшаве, прошлые дни остаются в списке дат.</p>
+      <p class="empty">Здесь выходит утренний отчёт: что произошло за ночь в Азии и на прошлой сессии США, почему, и что важного в календаре дня. Он обновляется по будням около 08:00 по Варшаве, прошлые дни остаются в списке дат.</p>
     </div>
     <div class="panel dg" id="dgPanel" hidden>
       <div class="dg-block">
@@ -501,6 +499,7 @@ body.noscroll{overflow:hidden}
         <div id="dgCalBox"><h4>Календарь, время по Варшаве</h4><ul class="cal" id="dgCal"></ul></div>
       </div>
       <div class="dg-block" id="dgUsBox"><h4>Прошлая сессия США</h4><p id="dgUs" style="max-width:68ch"></p></div>
+      <div class="dg-block" id="dgCryptoBox"><h4>Биткойн и крипторынок</h4><p id="dgCrypto" style="max-width:68ch"></p></div>
       <div class="dg-block" id="dgSrcBox"><h4>Источники</h4><ul class="src" id="dgSrc"></ul></div>
     </div>
   </section>
@@ -670,7 +669,7 @@ body.noscroll{overflow:hidden}
       <p class="sec-note" id="vStamp"></p>
     </div>
     <div class="panel" id="vEmpty">
-      <p class="empty">Здесь появятся данные вольта из утреннего отчёта: цена пая, размер, доходность за месяц и с запуска рядом с биткойном, худшая просадка.</p>
+      <p class="empty">Данные вольта идут напрямую с Hyperliquid. Сейчас они не загрузились.</p>
     </div>
     <div class="panel stack" id="vPanel" hidden>
       <div class="vault-head">
@@ -678,12 +677,12 @@ body.noscroll{overflow:hidden}
         <a id="vLink" target="_blank" rel="noopener noreferrer" hidden>Открыть на Hyperliquid</a>
       </div>
       <div class="tiles">
-        <div class="tile"><div class="lab">Цена пая</div><div class="tile-v" id="vPrice">—</div><div class="tile-s" id="vPriceS"></div></div>
+        <div class="tile"><div class="lab">За сутки</div><div class="tile-v" id="vD">—</div><div class="tile-s" id="vDS"></div></div>
+        <div class="tile"><div class="lab">За неделю</div><div class="tile-v" id="vW">—</div><div class="tile-s" id="vWS"></div></div>
         <div class="tile"><div class="lab">За месяц</div><div class="tile-v" id="vM">—</div><div class="tile-s" id="vMS"></div></div>
-        <div class="tile"><div class="lab">С запуска</div><div class="tile-v" id="vL">—</div><div class="tile-s" id="vLS"></div></div>
-        <div class="tile"><div class="lab">Худшая просадка</div><div class="tile-v" id="vDD">—</div><div class="tile-s">от пика до дна</div></div>
-        <div class="tile"><div class="lab">Размер вольта</div><div class="tile-v" id="vTvl">—</div><div class="tile-s">деньги вкладчиков</div></div>
-        <div class="tile"><div class="lab">Итог за всё время</div><div class="tile-v" id="vPnl">—</div><div class="tile-s">прибыль или убыток вольта</div></div>
+        <div class="tile"><div class="lab">Просадка за месяц</div><div class="tile-v" id="vDD">—</div><div class="tile-s">от пика до дна за эти 30 дней</div></div>
+        <div class="tile"><div class="lab">Итог за всё время</div><div class="tile-v" id="vPnl">—</div><div class="tile-s">прибыль или убыток вольта в деньгах</div></div>
+        <div class="tile"><div class="lab">Оборот за месяц</div><div class="tile-v" id="vVlm">—</div><div class="tile-s">сумма всех сделок вольта</div></div>
       </div>
       <p class="vault-note" id="vNote"></p>
     </div>
@@ -725,7 +724,7 @@ body.noscroll{overflow:hidden}
     </div>
   </section>
 
-  <section class="sec" id="history">
+  <section class="sec" id="history" hidden>
     <div class="sec-head">
       <h2>История</h2>
       <p class="sec-note" id="hsNote"></p>
@@ -741,7 +740,7 @@ body.noscroll{overflow:hidden}
   </section>
 
   <footer>
-    Цена, график, фандинг и позиции вольта приходят с Hyperliquid в реальном времени, графики рынков и календарь показывает TradingView, потоки ETF приходят с SoSoValue и The Block, вероятности по заседаниям ФРС раз в час обновляются с биржи прогнозов Kalshi, текущая ставка берётся из данных ФРС (FRED), ставки на ближайшее решение идут с рынка исходов Hyperliquid. Утренний отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
+Цена, график, фандинг и все цифры вольта приходят с Hyperliquid в реальном времени, реализованная и balanced price раз в несколько часов обновляются по графикам Bitbo, графики рынков и календарь показывает TradingView, потоки ETF приходят с SoSoValue и The Block, вероятности по заседаниям ФРС раз в час обновляются с биржи прогнозов Kalshi, текущая ставка берётся из данных ФРС (FRED), ставки на ближайшее решение идут с рынка исходов Hyperliquid. Утренний отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
   </footer>
 </div>
 
@@ -847,7 +846,7 @@ function normDigest(d){
   if (!d || typeof d !== "object" || !isDate(d.date)) return null;
   return {
     date: d.date,
-    asOf: str(d.asOf, 200), headline: str(d.headline, 300), summary: str(d.summary, 4000), us: str(d.us, 4000),
+    asOf: str(d.asOf, 200), headline: str(d.headline, 300), summary: str(d.summary, 4000), us: str(d.us, 4000), crypto: str(d.crypto, 4000),
     watch: arr(d.watch, 12).filter((x) => typeof x === "string").map((x) => x.slice(0, 600)),
     rows: arr(d.rows, 60).filter((r) => r && typeof r === "object").map((r) => ({
       group: str(r.group, 60) || "Прочее", key: str(r.key, 40), name: str(r.name, 80) || "Без названия",
@@ -881,17 +880,11 @@ function btcNow(){
   }
   return null;
 }
-function levelSet(){
-  for (const d of S.digests) if (d.levels.length) return {date: d.date, levels: d.levels};
-  return {date: null, levels: []};
+function levelSet(){   // on-chain levels, loaded by the live layer
+  return S.lv && S.lv.levels.length ? S.lv : {date: null, note: "", levels: []};
 }
-function vaultNow(){
-  for (const d of S.digests) if (d.vault) return {v: d.vault, date: d.date};
-  return null;
-}
-function prevVaultPrice(date){
-  for (const d of S.digests) if (d.date < date && d.vault && d.vault.sharePrice) return {p: d.vault.sharePrice, date: d.date};
-  return null;
+function vaultNow(){   // figures computed from the vault's own history on Hyperliquid, by the live layer
+  return S.vaultLive ? {v: S.vaultLive} : null;
 }
 function domain(){
   const vals = [];
@@ -959,17 +952,17 @@ function renderHero(){
   $("hNext").textContent = v; $("hNextSub").textContent = vs;
 
   const vn = vaultNow();
-  if (vn && vn.v.sharePrice){
-    $("hVault").textContent = nf3.format(vn.v.sharePrice);
-    $("hVaultSub").textContent = vn.v.ret1m != null ? "за месяц " + pct(vn.v.ret1m) + (vn.v.btc1m != null ? ", биткойн " + pct(vn.v.btc1m) : "") : vn.v.name;
-  } else { $("hVault").textContent = "—"; $("hVaultSub").textContent = "Данные придут вместе с отчётом"; }
+  if (vn && vn.v.ret1m != null){
+    signTile("hVault", vn.v.ret1m, pct(vn.v.ret1m));
+    $("hVaultSub").textContent = (vn.v.btc1m != null ? "биткойн за то же время " + pct(vn.v.btc1m) : vn.v.name) + (vn.v.pnlAll != null ? "; итог за всё время " + usdBig(vn.v.pnlAll) : "");
+  } else { $("hVault").classList.remove("up", "down"); $("hVault").textContent = "—"; $("hVaultSub").textContent = "Данные вольта идут с Hyperliquid"; }
 }
 function renderStatus(){
   const box = $("status"), text = $("statusText"), retry = $("retry");
   let msg = ""; retry.hidden = true;
   if (S.load === "loading") msg = "Загружаю данные…";
   else if (S.load === "error"){ msg = "Данные не загрузились. Проверьте связь и попробуйте ещё раз."; retry.hidden = false; }
-  else if (S.reportAge > 10) msg = "Утренний отчёт не выходил " + S.reportAge + " " + plural(S.reportAge, "день", "дня", "дней") + ", поэтому его цифры, уровни и история скрыты. Живые блоки работают как обычно.";
+  else if (S.reportAge > 10) msg = "Утренний отчёт не выходил " + S.reportAge + " " + plural(S.reportAge, "день", "дня", "дней") + ", поэтому он скрыт. Остальные блоки работают как обычно.";
   else if (S.digests[0] && daysAgo(S.digests[0].date) > 3) msg = "Последний отчёт вышел " + daysAgo(S.digests[0].date) + " " + plural(daysAgo(S.digests[0].date), "день", "дня", "дней") + " назад. Автоматическое обновление могло не сработать, цифры устарели.";
   box.hidden = !msg; text.textContent = msg;
 }
@@ -1026,6 +1019,7 @@ function renderDigest(){
   $("dgCalBox").hidden = !d.calendar.length;
   $("dgCols").hidden = !d.watch.length && !d.calendar.length;
   $("dgUs").textContent = d.us; $("dgUsBox").hidden = !d.us;
+  $("dgCrypto").textContent = d.crypto; $("dgCryptoBox").hidden = !d.crypto;
   $("dgSrc").replaceChildren(...d.sources.map((x) => h("li", null,
     x.url ? h("a", {href: x.url, target: "_blank", rel: "noopener noreferrer", text: x.title || x.url}) : x.title)));
   $("dgSrcBox").hidden = !d.sources.length;
@@ -1119,7 +1113,7 @@ function renderMap(){
 }
 function renderLevels(){
   const set = levelSet(); const now = btcNow();
-  $("lvStamp").textContent = set.date ? "Рыночные уровни из отчёта за " + longDate(set.date) : "";
+  $("lvStamp").textContent = set.levels.length ? set.note || "" : "";
   const tb = $("lvTable").tBodies[0]; tb.replaceChildren();
   const rows = set.levels.map((l) => ({name: l.name, v: l.value, note: l.note, stale: l.stale, goal: false}))
     .concat(S.targets.map((t) => ({name: "Цель на покупку", v: t.price, note: t.note, stale: false, goal: true})));
@@ -1199,23 +1193,21 @@ function signTile(id, n, text){
 function renderVault(){
   const vn = vaultNow();
   $("vEmpty").hidden = !!vn; $("vPanel").hidden = !vn;
-  $("vStamp").textContent = vn ? "Данные из отчёта за " + longDate(vn.date) : "";
+  $("vStamp").textContent = vn && vn.v.at ? "данные Hyperliquid, обновлено в " + new Date(vn.v.at).toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit"}) : "";
   if (vn){
-    const v = vn.v;
+    const v = vn.v, money = (n) => n == null ? "" : (n > 0 ? "+" : "") + usdBig(n);
     $("vName").textContent = v.name;
     const link = $("vLink");
     if (v.address){ link.href = "https://app.hyperliquid.xyz/vaults/" + v.address; link.hidden = false; } else link.hidden = true;
-    const prev = prevVaultPrice(vn.date);
-    $("vPrice").textContent = v.sharePrice ? nf3.format(v.sharePrice) : "—";
-    $("vPriceS").textContent = v.sharePrice && prev ? pct((v.sharePrice / prev.p - 1) * 100) + " с " + shortDate(prev.date) : "на старте вольта пай стоил 1,000";
+    signTile("vD", v.ret1d, pct(v.ret1d)); $("vDS").textContent = money(v.pnl1d);
+    signTile("vW", v.ret1w, pct(v.ret1w)); $("vWS").textContent = money(v.pnl1w);
     signTile("vM", v.ret1m, pct(v.ret1m));
-    $("vMS").textContent = v.btc1m != null ? "биткойн за то же время " + pct(v.btc1m) : "";
-    signTile("vL", v.retLife, pct(v.retLife));
-    $("vLS").textContent = v.btcLife != null ? "биткойн за то же время " + pct(v.btcLife) : "";
-    signTile("vDD", v.maxDD, pct(v.maxDD));
-    $("vTvl").textContent = usdBig(v.tvl);
+    $("vMS").textContent = [money(v.pnl1m), v.btc1m != null ? "биткойн за то же время " + pct(v.btc1m) : ""].filter(Boolean).join("; ");
+    signTile("vDD", v.dd1m, pct(v.dd1m));
     signTile("vPnl", v.pnlAll, usdBig(v.pnlAll));
-    $("vNote").textContent = [v.asOf ? "Данные на " + v.asOf + "." : "", v.note].filter(Boolean).join(" ");
+    $("vVlm").textContent = usdBig(v.vlm1m);
+    $("vNote").textContent = "Доходность посчитана по истории счёта вольта на Hyperliquid: прибыль каждого отрезка делится на деньги, которые были в вольте в его начале, поэтому вводы и выводы вкладчиков её не искажают."
+      + (v.fee != null ? " Комиссия управляющего: " + pct(v.fee * 100, 0).replace("+", "") + " с прибыли." : "");
   }
 
   const mv = S.vMove;
@@ -1226,9 +1218,9 @@ function renderVault(){
   $("vOut").textContent = usd(S.vAmt) + " превратятся в " + usd(after);
   $("vOutS").textContent = mv > 0 ? "После комиссии управляющего (10% с прибыли) останется " + usd(S.vAmt + (after - S.vAmt) * 0.9) + "." : mv < 0 ? "Убыток " + usd(S.vAmt - after) + "." : "";
   const chips = [["ликвидация, −100%", -100]];
-  if (vn && vn.v.maxDD != null && vn.v.maxDD < 0) chips.push(["как худшая просадка, " + pct(vn.v.maxDD, 0), Math.round(vn.v.maxDD)]);
+  if (vn && vn.v.dd1m != null && vn.v.dd1m < 0) chips.push(["как просадка за месяц, " + pct(vn.v.dd1m, 0), Math.round(vn.v.dd1m)]);
   chips.push(["без изменений", 0]);
-  if (vn && vn.v.sharePrice && vn.v.sharePrice < 1) chips.push(["пай вернётся к 1,000", Math.round((1 / vn.v.sharePrice - 1) * 100)]);
+  if (vn && vn.v.ret1m != null && vn.v.ret1m < 0 && vn.v.ret1m > -99) chips.push(["отыграть месяц", Math.round((1 / (1 + vn.v.ret1m / 100) - 1) * 100)]);
   const sig = JSON.stringify(chips);
   if (sig !== S.vChipSig){
     S.vChipSig = sig;
@@ -1368,7 +1360,7 @@ function renderHistory(force){
 
 /* ---------- orchestration ---------- */
 function recalc(){ renderHero(); renderWhat(); renderMap(); renderLevels(); renderResults(); renderScenarios(); }
-function renderAll(){ renderStatus(); renderDigest(); recalc(); renderVault(); renderHistory(true); }
+function renderAll(){ renderStatus(); renderDigest(); recalc(); renderVault(); }
 
 async function load(){
   S.load = "loading"; renderStatus();
@@ -1414,10 +1406,10 @@ window.addEventListener("resize", () => {
   if (window.innerWidth === lastW) return;
   lastW = window.innerWidth;
   cancelAnimationFrame(rz);
-  rz = requestAnimationFrame(() => { renderMap(); renderHistory(true); });
+  rz = requestAnimationFrame(() => { renderMap(); });
 });
 
-window.DESK = {S, $, h, usd, usdBig, pct, nf0, nf1, nf2, btcf, levelSet, recalc, renderHero, longDate, shortDate, parseDate};
+window.DESK = {S, $, h, usd, usdBig, pct, nf0, nf1, nf2, btcf, levelSet, recalc, renderHero, renderVault, longDate, shortDate, parseDate};
 renderAll();
 load();
 })();
@@ -1657,12 +1649,48 @@ function setExpanded(on){
 
 /* ---------- vault, live ---------- */
 let pnlChart = null, pnlSeries = null;
+/* returns and drawdown from the vault's own history: each step's profit over the money that was in the vault at its start,
+   so deposits and withdrawals do not distort it */
+function vaultStats(det, av){
+  const P = {}; for (const x of det.portfolio || []) if (x && x[0] && x[1]) P[x[0]] = x[1];
+  const stat = (key) => {
+    const a = P[key] && P[key].accountValueHistory, p = P[key] && P[key].pnlHistory;
+    if (!Array.isArray(a) || !Array.isArray(p) || a.length < 2 || a.length !== p.length) return null;
+    let idx = 1, peak = 1, dd = 0;
+    for (let i = 1; i < a.length; i++){
+      const base = +a[i - 1][1], dp = +p[i][1] - +p[i - 1][1];
+      if (!(base > 1000) || !isFinite(dp) || dp / base < -0.95) continue;
+      idx *= 1 + dp / base; peak = Math.max(peak, idx); dd = Math.min(dd, idx / peak - 1);
+    }
+    return {ret: (idx - 1) * 100, dd: dd * 100, pnl: +p[p.length - 1][1] - +p[0][1], from: +a[0][0], vlm: +P[key].vlm};
+  };
+  const d1 = stat("day"), w1 = stat("week"), m1 = stat("month"), all = P.allTime && P.allTime.pnlHistory;
+  return {name: String(det.name || "Вольт").slice(0, 60), address: VAULT, at: Date.now(), tvl: av,
+    ret1d: d1 ? d1.ret : null, pnl1d: d1 ? d1.pnl : null, ret1w: w1 ? w1.ret : null, pnl1w: w1 ? w1.pnl : null,
+    ret1m: m1 ? m1.ret : null, pnl1m: m1 ? m1.pnl : null, dd1m: m1 ? m1.dd : null, vlm1m: m1 && isFinite(m1.vlm) ? m1.vlm : null, monthFrom: m1 ? m1.from : 0,
+    pnlAll: Array.isArray(all) && all.length ? +all[all.length - 1][1] : null,
+    fee: typeof det.leaderCommission === "number" ? det.leaderCommission : null, btc1m: S.vaultLive ? S.vaultLive.btc1m : null};
+}
+let vBtc = {from: 0, px: 0};
+async function vaultBtc(){   // bitcoin over the same window as the vault's month
+  const v = S.vaultLive; if (!v || !v.monthFrom || !S.live) return;
+  const hour = Math.floor(v.monthFrom / 3600e3) * 3600e3;
+  try {
+    if (vBtc.from !== hour){
+      const rows = await hl({type: "candleSnapshot", req: {coin: "BTC", interval: "1h", startTime: hour - 3600e3, endTime: hour + 3600e3}});
+      const r = rows.filter(sane).sort((a, b) => a.t - b.t).pop();
+      if (r) vBtc = {from: hour, px: +r.c};
+    }
+    if (vBtc.px > 0 && S.vaultLive && S.live){ S.vaultLive.btc1m = (S.live.price / vBtc.px - 1) * 100; D.renderVault(); D.renderHero(); }
+  } catch (e){}
+}
 async function loadVault(){
   if (document.hidden) return;
   try {
     const [det, st] = await Promise.all([hl({type: "vaultDetails", vaultAddress: VAULT}), hl({type: "clearinghouseState", user: VAULT})]);
     const av = +st.marginSummary.accountValue, ntl = +st.marginSummary.totalNtlPos;
     S.liveVault = {av, lev: av > 0 ? ntl / av : 0, at: Date.now()};
+    S.vaultLive = vaultStats(det, av); D.renderVault(); D.renderHero(); vaultBtc();
     $("vLive").hidden = false;
     $("vlAv").textContent = usdBig(av);
     $("vlLev").textContent = nf2.format(S.liveVault.lev) + "x";
@@ -1704,6 +1732,7 @@ async function loadVault(){
     }
   } catch (e){
     if (!S.liveVault) $("vLive").hidden = true;
+    if (S.vaultLive && Date.now() - S.vaultLive.at > 30 * 60e3){ S.vaultLive = null; D.renderVault(); D.renderHero(); }   // no stale vault figures
   }
 }
 
@@ -2100,6 +2129,43 @@ function renderFed(){
   $("fdSchedNote").replaceChildren("Даты: ", link("календарь ФРС", CAL ? CAL.calUrl : ""), ". Решение объявляют во второй день в 14:00 по Нью-Йорку, время в таблице местное, даты 2027 года предварительные.");
 }
 
+/* ---------- market levels: realized and balanced price (levels.json, refreshed by the GitHub job from Bitbo's free charts)
+   and the 52-week low from Hyperliquid's daily candles. Nothing here comes from the morning report. ---------- */
+const LV_NAMES = {realized: "Реализованная цена", balanced: "Balanced price"};
+let lvFeed = null, lvLow = null;
+function applyLevels(){
+  const out = [];
+  if (lvLow) out.push({key: "low52w", name: "Минимум за год", value: lvLow, note: "по свечам Hyperliquid", stale: false});
+  const feed = lvFeed && Date.now() - lvFeed.updated < 10 * 864e5 ? lvFeed.levels : [];   // a feed that stopped hides itself
+  for (const l of feed) out.push({key: l.key, name: LV_NAMES[l.key], value: l.value, note: "на " + isoDay(l.asOf) + (l.src ? ", " + l.src : ""), stale: false});
+  out.sort((a, b) => b.value - a.value);
+  const parts = feed.map((l) => LV_NAMES[l.key].toLowerCase() + " на " + isoDay(l.asOf) + (l.src ? " (" + l.src + ")" : ""));
+  S.lv = {date: null, levels: out, note: [parts.join(", "), lvLow ? "минимум за год по свечам Hyperliquid" : ""].filter(Boolean).join("; ")};
+  D.recalc(); drawLines();
+}
+async function loadLevels(){
+  let got = null;
+  const m = /^([a-z0-9-]+)\.github\.io$/i.exec(location.hostname), repo = location.pathname.split("/")[1];
+  for (const u of [m && repo ? "https://raw.githubusercontent.com/" + m[1] + "/" + repo + "/data/levels.json" : "", "levels.json"]){
+    if (!u) continue;
+    try {
+      const d = await getJson(u, 6000);
+      const f = {updated: Date.parse(d.updated) || 0, levels: (Array.isArray(d.levels) ? d.levels : []).filter((l) => l && LV_NAMES[l.key] && numOk(l.value) > 1000 && isD(l.asOf)).map((l) => ({key: l.key, value: l.value, asOf: l.asOf, src: typeof l.src === "string" ? l.src.slice(0, 20) : ""}))};
+      if (f.levels.length && (!got || f.updated > got.updated)) got = f;
+      if (got && Date.now() - got.updated < 12 * 3600e3) break;
+    } catch (e){}
+  }
+  if (got) lvFeed = got;
+  applyLevels();
+}
+async function loadYearLow(){
+  try {
+    const now = Date.now(), rows = await hl({type: "candleSnapshot", req: {coin: "BTC", interval: "1d", startTime: now - 365 * 864e5, endTime: now}});
+    const lows = rows.filter(sane).map((r) => +r.l).filter((v) => v > 0);
+    if (lows.length > 30){ lvLow = Math.min(...lows); applyLevels(); }
+  } catch (e){}
+}
+
 /* ---------- Fed decision odds: Hyperliquid outcome markets, where the "Yes" price of an outcome is its probability ---------- */
 const LEGS = [
   {k: "up", re: /policyRateIncrease$/, name: "Повышение", cssVar: "--s1"},
@@ -2252,6 +2318,7 @@ D.opens = () => OPEN;
 D.etf = () => { const k = ETF[eIdx].k, c = SO[k]; return {asset: k, etfDone, days: etfSeries(k).length, live: !!(c && c.rows), err: !!(c && c.err), liveLast: c && c.rows ? c.rows[c.rows.length - 1].date : null, frames: [...document.querySelectorAll("#etf iframe")].map((f) => f.src)}; };
 D.etfReload = (k) => loadSoso(k || ETF[eIdx].k, true);
 D.fed = () => ({sel: fedSel, cal: CAL ? CAL.schedule.length : null, fed: FED && {cur: FED.cur, bandAsOf: FED.bandAsOf, last: FED.last, meetings: FED.meetings.length, hist: FED.hist.length, updated: FED.updated, oddsAt: FED.oddsAt}, dataUrl: fedDataUrl()});
+D.levels = () => ({feed: lvFeed, low: lvLow, set: S.lv});
 D.odds = () => FO && {key: FO.key, at: FO.at, mids: foMids, dayAgo: foDayAgo, range: foRange, pts: Object.fromEntries(Object.entries(foHist).map(([k, v]) => [k, v.length])), series: Object.keys(foSeries).length};
 D.watch = () => ({folders: WL.map((f) => f.name + ":" + f.items.length), fIdx, cur: WL.length ? curSym() : null, tvDone});
 renderLive();
@@ -2266,6 +2333,9 @@ setInterval(() => loadSoso(ETF[eIdx].k), 5 * 60e3);
 loadFed();
 setInterval(renderFed, 60e3);           // the countdown
 setInterval(loadFed, 30 * 60e3);
+loadLevels(); loadYearLow();
+setInterval(loadLevels, 60 * 60e3);
+setInterval(loadYearLow, 6 * 3600e3);
 loadOutcomes();
 setInterval(pollOdds, 30e3);
 setInterval(loadOddsHistory, 10 * 60e3);

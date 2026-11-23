@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Refreshes fed.json: the Fed's current target range and market odds for each coming meeting.
+"""Refreshes the data files the site cannot fetch from a browser.
 
 Runs from GitHub Actions on a schedule; no secrets, no dependencies, nobody's computer.
+
+fed.json: the Fed's current target range and market odds for each coming meeting
   - odds per meeting: Kalshi's public market-data API (series KXFEDDECISION: hike, hold, cut)
   - current target range: FRED series DFEDTARL / DFEDTARU (the Fed's own numbers)
   - meeting calendar: fed-calendar.json in this repository
+levels.json: on-chain price levels for bitcoin (realized price, balanced price)
+  - the free daily charts of Bitbo (charts.bitbo.io), read a few times a day
+  - if Bitbo is unreachable, the realized price from BGeometrics' free API (it can lag by a week)
 
 Each source is optional: if one is unreachable or looks wrong, the previous values for that part are
 kept, and the site hides numbers that have not been refreshed for several days.
@@ -13,12 +18,16 @@ import csv
 import datetime as dt
 import io
 import json
+import re
 import sys
 import urllib.request
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2/events?series_ticker=KXFEDDECISION&status=open&with_nested_markets=true&limit=50"
 FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFEDTARL,DFEDTARU&cosd="
-OUT, CAL = "fed.json", "fed-calendar.json"
+OUT, CAL, LEVELS = "fed.json", "fed-calendar.json", "levels.json"
+BITBO = "https://charts.bitbo.io/"
+BITBO_LEVELS = (("realized", "realized-price", "realized_price"), ("balanced", "balanced-price", "balanced"))   # key, page, variable on the page
+BG_REALIZED = "https://bitcoin-data.com/v1/realized-price/last"
 UA = "market-desk feed (+https://github.com/olvichernik/market-desk)"
 LEG = {"H0": "hold", "H25": "up25", "H26": "upBig", "C25": "down25", "C26": "downBig"}
 
@@ -114,8 +123,66 @@ def source(name, arg, url):
         return None
 
 
+def bitbo_last(html, var):
+    """The chart pages carry their daily series as JavaScript arrays: the dates in axis_x, the values in a named one."""
+    def arr(name):
+        m = re.search(r"var\s+" + re.escape(name) + r"\s*=\s*\[([^\]]*)\]", html)
+        return [x.strip() for x in m.group(1).split(",")] if m else None
+    xs, ys = arr("axis_x"), arr(var)
+    if not xs or not ys or len(xs) != len(ys) or len(xs) < 1000:
+        raise ValueError("series %s not found" % var)
+    day, v = xs[-1].strip("\"'"), num(ys[-1])
+    dt.date.fromisoformat(day)
+    if v is None or not 1000 < v < 10_000_000:
+        raise ValueError("odd value %r" % ys[-1])
+    return day, round(v, 2)
+
+
+def levels(now, sample=None):
+    """Realized and balanced price, each with the date of its own last value."""
+    try:
+        old = json.load(open(LEVELS, encoding="utf-8"))
+    except Exception:
+        old = {}
+    try:
+        age = (now - dt.datetime.fromisoformat(str(old.get("updated")).replace("Z", "+00:00"))).total_seconds()
+    except ValueError:
+        age = 1e9
+    if age < 5 * 3600 and not sample:
+        print("levels.json is fresh")
+        return
+    have, got = {}, 0
+    for key, page, var in BITBO_LEVELS:
+        try:
+            html = open(sample[key], encoding="utf-8").read() if sample else get(BITBO + page + "/")
+            day, v = bitbo_last(html, var)
+            have[key] = {"key": key, "value": v, "asOf": day, "src": "Bitbo", "url": BITBO + page + "/"}
+            got += 1
+        except Exception as e:
+            print("Bitbo", key, "unavailable:", repr(e))
+    if "realized" not in have and not sample:
+        try:
+            j = json.loads(get(BG_REALIZED))
+            v, day = num(j.get("realizedPrice")), str(j.get("d") or "")
+            dt.date.fromisoformat(day)
+            if v is not None and 1000 < v < 10_000_000:
+                have["realized"] = {"key": "realized", "value": round(v, 2), "asOf": day, "src": "BGeometrics", "url": "https://bitcoin-data.com/"}
+                got += 1
+        except Exception as e:
+            print("BGeometrics realized unavailable:", repr(e))
+    if not got:
+        return
+    doc = {"updated": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "levels": [have[k] for k, _, _ in BITBO_LEVELS if k in have]}
+    open(LEVELS, "w", encoding="utf-8").write(json.dumps(doc, ensure_ascii=False, separators=(",", ":")) + "\n")
+    print("levels.json:", ", ".join("%s %s (%s, %s)" % (l["key"], l["value"], l["asOf"], l["src"]) for l in doc["levels"]))
+
+
 def main():
-    args = sys.argv[1:]                       # local test: feeds.py kalshi.json fred.csv
+    args = sys.argv[1:]                       # local test: feeds.py kalshi.json fred.csv [realized.html balanced.html]
+    try:
+        levels(dt.datetime.now(dt.timezone.utc), {"realized": args[2], "balanced": args[3]} if len(args) > 3 else None)
+    except Exception as e:
+        print("levels skipped:", repr(e))
     now = dt.datetime.now(dt.timezone.utc)
     today = now.date()
     try:
