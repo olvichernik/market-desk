@@ -37,7 +37,6 @@ const BAR = `<div class="bar" id="bar">
       <a href="#fed" data-go="fed">ФРС</a>
       <a href="#mood" data-go="mood">Настроение</a>
       <a href="#cycle" data-go="cycle">Цикл</a>
-      <a href="#ladder" data-go="ladder">Уровни</a>
       <a href="#vault" data-go="vault">Вольт</a>
     </nav>
     <a class="bar-px" id="barPx" href="#top" data-go="top" tabindex="-1" aria-hidden="true"><span class="live-dot off" id="bDot"></span><b id="bPrice">—</b><span class="chg" id="bChg"></span></a>
@@ -78,7 +77,7 @@ rep(`  <section class="sec" id="today">`, `  <section class="sec" id="chart">
   </section>
 
   <section class="sec" id="today">`);
-rep(`  <section class="sec" id="ladder">`, `  <section class="sec" id="markets">
+rep(`  <section class="sec" id="ladder" hidden>`, `  <section class="sec" id="markets">
     <div class="sec-head">
       <h2>Рынки</h2>
       <p class="sec-note">Графики, котировки и календарь TradingView</p>
@@ -253,6 +252,16 @@ rep(`  <section class="sec" id="ladder">`, `  <section class="sec" id="markets">
         </div>
         <p class="hint" id="cyNote"></p>
       </div>
+      <div class="panel stack" id="cyLevels">
+        <div class="sec-head"><h3>Рыночные уровни</h3><p class="sec-note" id="lvStamp"></p></div>
+        <div class="scroll">
+          <table class="tbl" id="lvTable">
+            <thead><tr><th>Уровень</th><th class="r">Цена, от текущей</th><th class="r" id="lvOddsH" hidden>Шанс за 30 дней</th></tr></thead>
+            <tbody><tr><td colspan="3" class="muted">Уровни сейчас не загрузились.</td></tr></tbody>
+          </table>
+        </div>
+        <p class="hint" id="lvOddsNote" hidden></p>
+      </div>
       <div class="panel stack" id="cyChartBox">
         <div class="sec-head"><h3>Цена и реализованная цена</h3>
           <p class="sec-note fd-legend"><span><i class="fo-dot" style="background:var(--s1)"></i>цена</span><span><i class="fo-dot" style="background:var(--s2)"></i>реализованная цена</span><span><i class="cy-band"></i>цена ниже реализованной</span></p></div>
@@ -270,7 +279,7 @@ rep(`  <section class="sec" id="ladder">`, `  <section class="sec" id="markets">
     </div>
   </section>
 
-  <section class="sec" id="ladder">`);
+  <section class="sec" id="ladder" hidden>`);
 
 // vault: live panel with positions before the what-if block
 rep(`    <div class="panel v-what">`, `    <div class="panel stack" id="vLive" hidden>
@@ -344,7 +353,7 @@ const html = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Рыночный пульт</title>
-<meta name="description" content="Биткойн в реальном времени, уровни и цели, рынки, вольт DOUBLETOP и утренний отчёт.">
+<meta name="description" content="Биткойн в реальном времени: цикл и оценка, рынки, потоки ETF, ФРС, вольт DOUBLETOP и утренний отчёт.">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#eef2f3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0f1214" media="(prefers-color-scheme: dark)">

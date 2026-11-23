@@ -171,6 +171,8 @@ function renderCycle(){
 
   const elD = $("cyDd"); elD.textContent = dd == null ? "—" : pct(dd); sign(elD, dd || 0);
   set("cyDdS", "пик " + usd(peak.px) + ", " + fullDate(peak.d));
+  const hero = $("hCy"); hero.textContent = dd == null ? "—" : pct(dd); sign(hero, dd || 0);
+  set("hCyS", "пик " + usd(peak.px) + " был " + days + " " + plural(days, "день", "дня", "дней") + " назад");
   const ds = H.cycles.map((c) => c.days), dMin = Math.min(...ds), dMax = Math.max(...ds);
   set("cyDays", nf0.format(days));
   set("cyDaysS", H.cycles.length ? "прошлые циклы: дно на " + dMin + "–" + dMax + "-й день" : "");

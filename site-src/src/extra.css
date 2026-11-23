@@ -83,12 +83,8 @@ body.noscroll{overflow:hidden}
   .top > .tiles.q .tile{display:flex;flex-direction:column;justify-content:center}
 }
 @media (min-width:1700px){
-  #ladder{grid-column:span 7}
-  #vault{grid-column:span 5}
-  #ladder .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
-}
-@media (min-width:2100px){
-  #ladder .tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #vault:not(.folded){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 20px;align-items:start}
+  #vault > .sec-head,#vault > #vEmpty,#vault > .v-what{grid-column:1 / -1}
 }
 .dg > *{flex-shrink:0}
 .tk-q{margin-left:auto;padding-left:8px;font:500 12.5px/1 var(--f-mono);white-space:nowrap;color:var(--ink-3)}
@@ -259,7 +255,8 @@ body.noscroll .bar{visibility:hidden}
 @media (min-width:1100px) and (max-width:1699px){#cyStats .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (min-width:1100px){
   .cy-grid{grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:stretch}
-  #cyChartBox{display:flex;flex-direction:column}
+  #cyStats{grid-column:1;grid-row:1} #cyLevels{grid-column:1;grid-row:2}
+  #cyChartBox{grid-column:2;grid-row:1 / span 2;display:flex;flex-direction:column}
   .cy-chart{flex:1;height:auto;min-height:440px}
 }
 .mood-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}

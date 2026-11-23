@@ -215,9 +215,9 @@ footer{color:var(--ink-3);font-size:13px;max-width:70ch;border-top:1px solid var
         <div class="hero-sub" id="hSub">Цена появится вместе с отчётом</div>
       </div>
       <div class="stat">
-        <div class="lab">До ближайшей цели</div>
-        <div class="stat-v" id="hNext">—</div>
-        <div class="stat-s" id="hNextSub"></div>
+        <div class="lab">От пика цикла</div>
+        <div class="stat-v" id="hCy">—</div>
+        <div class="stat-s" id="hCyS"></div>
       </div>
       <div class="stat">
         <div class="lab">Вольт за месяц</div>
@@ -268,10 +268,9 @@ footer{color:var(--ink-3);font-size:13px;max-width:70ch;border-top:1px solid var
     </div>
   </section>
 
-  <section class="sec" id="ladder">
+  <section class="sec" id="ladder" hidden>
     <div class="sec-head">
       <h2>Уровни и цели</h2>
-      <p class="sec-note" id="lvStamp"></p>
     </div>
     <div class="duo">
       <div class="panel pane-map">
@@ -284,13 +283,6 @@ footer{color:var(--ink-3);font-size:13px;max-width:70ch;border-top:1px solid var
           <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle class="mp-tier hit" cx="7" cy="7" r="5"/></svg>цель сработает</li>
           <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><line class="mp-tick" x1="2" y1="7" x2="12" y2="7"/></svg>рыночный уровень</li>
         </ul>
-        <div class="scroll">
-          <table class="tbl" id="lvTable">
-            <thead><tr><th>Уровень</th><th class="r">Цена, от текущей</th><th class="r" id="lvOddsH" hidden>Шанс за 30 дней</th></tr></thead>
-            <tbody><tr><td colspan="3" class="muted">Уровни появятся вместе с отчётом.</td></tr></tbody>
-          </table>
-        </div>
-        <p class="hint" id="lvOddsNote" hidden></p>
       </div>
 
       <div class="pane-calc">
@@ -403,7 +395,7 @@ footer{color:var(--ink-3);font-size:13px;max-width:70ch;border-top:1px solid var
   </section>
 
   <footer>
-Отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
+Отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Калькулятор вольта считает условный пример. Это не инвестиционная рекомендация.
   </footer>
 </div>
 
@@ -589,18 +581,6 @@ function renderHero(){
     sub.textContent = "Цена появится вместе с отчётом";
   }
 
-  let v = "—", vs = S.targets.length ? "" : "Цели появятся вместе с отчётом";
-  if (S.targets.length && now){
-    const below = S.targets.filter((t) => t.price < now.price);
-    const reached = S.targets.length - below.length;
-    if (!below.length){ v = "Все пройдены"; vs = "Цена ниже всех " + S.targets.length + " целей"; }
-    else {
-      v = pct((below[0].price / now.price - 1) * 100);
-      vs = "до " + usd(below[0].price) + (reached ? ", уже пройдено целей: " + reached : "");
-    }
-  } else if (S.targets.length){ v = usd(S.targets[0].price); vs = "верхняя цель"; }
-  $("hNext").textContent = v; $("hNextSub").textContent = vs;
-
   const vn = vaultNow();
   if (vn && vn.v.ret1m != null){
     signTile("hVault", vn.v.ret1m, pct(vn.v.ret1m));
@@ -769,7 +749,7 @@ function renderLevels(){
   const rows = set.levels.map((l) => ({name: l.name, v: l.value, note: l.note, stale: l.stale, goal: false}))
     .concat(S.targets.map((t) => ({name: "Цель на покупку", v: t.price, note: t.note, stale: false, goal: true})));
   if (!rows.length){
-    tb.append(h("tr", null, h("td", {colspan: 3, class: "muted", text: "Уровни появятся вместе с отчётом."})));
+    tb.append(h("tr", null, h("td", {colspan: 3, class: "muted", text: "Уровни сейчас не загрузились."})));
     return;
   }
   rows.sort((a, b) => b.v - a.v);

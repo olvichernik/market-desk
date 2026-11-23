@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Рыночный пульт</title>
-<meta name="description" content="Биткойн в реальном времени, уровни и цели, рынки, вольт DOUBLETOP и утренний отчёт.">
+<meta name="description" content="Биткойн в реальном времени: цикл и оценка, рынки, потоки ETF, ФРС, вольт DOUBLETOP и утренний отчёт.">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#eef2f3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0f1214" media="(prefers-color-scheme: dark)">
@@ -293,12 +293,8 @@ body.noscroll{overflow:hidden}
   .top > .tiles.q .tile{display:flex;flex-direction:column;justify-content:center}
 }
 @media (min-width:1700px){
-  #ladder{grid-column:span 7}
-  #vault{grid-column:span 5}
-  #ladder .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
-}
-@media (min-width:2100px){
-  #ladder .tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #vault:not(.folded){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 20px;align-items:start}
+  #vault > .sec-head,#vault > #vEmpty,#vault > .v-what{grid-column:1 / -1}
 }
 .dg > *{flex-shrink:0}
 .tk-q{margin-left:auto;padding-left:8px;font:500 12.5px/1 var(--f-mono);white-space:nowrap;color:var(--ink-3)}
@@ -469,7 +465,8 @@ body.noscroll .bar{visibility:hidden}
 @media (min-width:1100px) and (max-width:1699px){#cyStats .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (min-width:1100px){
   .cy-grid{grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:stretch}
-  #cyChartBox{display:flex;flex-direction:column}
+  #cyStats{grid-column:1;grid-row:1} #cyLevels{grid-column:1;grid-row:2}
+  #cyChartBox{grid-column:2;grid-row:1 / span 2;display:flex;flex-direction:column}
   .cy-chart{flex:1;height:auto;min-height:440px}
 }
 .mood-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
@@ -502,7 +499,6 @@ body.noscroll .bar{visibility:hidden}
       <a href="#fed" data-go="fed">ФРС</a>
       <a href="#mood" data-go="mood">Настроение</a>
       <a href="#cycle" data-go="cycle">Цикл</a>
-      <a href="#ladder" data-go="ladder">Уровни</a>
       <a href="#vault" data-go="vault">Вольт</a>
     </nav>
     <a class="bar-px" id="barPx" href="#top" data-go="top" tabindex="-1" aria-hidden="true"><span class="live-dot off" id="bDot"></span><b id="bPrice">—</b><span class="chg" id="bChg"></span></a>
@@ -524,9 +520,9 @@ body.noscroll .bar{visibility:hidden}
         <div class="hero-sub" id="hSub">Цена появится вместе с отчётом</div>
       </div>
       <div class="stat">
-        <div class="lab">До ближайшей цели</div>
-        <div class="stat-v" id="hNext">—</div>
-        <div class="stat-s" id="hNextSub"></div>
+        <div class="lab">От пика цикла</div>
+        <div class="stat-v" id="hCy">—</div>
+        <div class="stat-s" id="hCyS"></div>
       </div>
       <div class="stat">
         <div class="lab">Вольт за месяц</div>
@@ -785,6 +781,16 @@ body.noscroll .bar{visibility:hidden}
         </div>
         <p class="hint" id="cyNote"></p>
       </div>
+      <div class="panel stack" id="cyLevels">
+        <div class="sec-head"><h3>Рыночные уровни</h3><p class="sec-note" id="lvStamp"></p></div>
+        <div class="scroll">
+          <table class="tbl" id="lvTable">
+            <thead><tr><th>Уровень</th><th class="r">Цена, от текущей</th><th class="r" id="lvOddsH" hidden>Шанс за 30 дней</th></tr></thead>
+            <tbody><tr><td colspan="3" class="muted">Уровни сейчас не загрузились.</td></tr></tbody>
+          </table>
+        </div>
+        <p class="hint" id="lvOddsNote" hidden></p>
+      </div>
       <div class="panel stack" id="cyChartBox">
         <div class="sec-head"><h3>Цена и реализованная цена</h3>
           <p class="sec-note fd-legend"><span><i class="fo-dot" style="background:var(--s1)"></i>цена</span><span><i class="fo-dot" style="background:var(--s2)"></i>реализованная цена</span><span><i class="cy-band"></i>цена ниже реализованной</span></p></div>
@@ -802,10 +808,9 @@ body.noscroll .bar{visibility:hidden}
     </div>
   </section>
 
-  <section class="sec" id="ladder">
+  <section class="sec" id="ladder" hidden>
     <div class="sec-head">
       <h2>Уровни и цели</h2>
-      <p class="sec-note" id="lvStamp"></p>
     </div>
     <div class="duo">
       <div class="panel pane-map">
@@ -818,13 +823,6 @@ body.noscroll .bar{visibility:hidden}
           <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle class="mp-tier hit" cx="7" cy="7" r="5"/></svg>цель сработает</li>
           <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><line class="mp-tick" x1="2" y1="7" x2="12" y2="7"/></svg>рыночный уровень</li>
         </ul>
-        <div class="scroll">
-          <table class="tbl" id="lvTable">
-            <thead><tr><th>Уровень</th><th class="r">Цена, от текущей</th><th class="r" id="lvOddsH" hidden>Шанс за 30 дней</th></tr></thead>
-            <tbody><tr><td colspan="3" class="muted">Уровни появятся вместе с отчётом.</td></tr></tbody>
-          </table>
-        </div>
-        <p class="hint" id="lvOddsNote" hidden></p>
       </div>
 
       <div class="pane-calc">
@@ -956,7 +954,7 @@ body.noscroll .bar{visibility:hidden}
   </section>
 
   <footer>
-Цена, график, фандинг и все цифры вольта приходят с Hyperliquid в реальном времени, 200-недельная средняя и минимум за год считаются по свечам Hyperliquid, реализованная цена приходит от BGeometrics с задержкой около недели, графики рынков и календарь показывает TradingView, потоки ETF приходят с SoSoValue и The Block, вероятности по заседаниям ФРС раз в час обновляются с биржи прогнозов Kalshi, текущая ставка берётся из данных ФРС (FRED), ставки на ближайшее решение идут с рынка исходов Hyperliquid. История цены и реализованной цены с 2011 года взята у Bitbo, шансы касания уровней считаются по индексу волатильности Deribit, индекс страха и жадности отдаёт alternative.me, стейблкоины и выручку протоколов считает DefiLlama, капитализацию токенов даёт CoinGecko. Утренний отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
+Цена, график, фандинг и все цифры вольта приходят с Hyperliquid в реальном времени, 200-недельная средняя и минимум за год считаются по свечам Hyperliquid, реализованная цена приходит от BGeometrics с задержкой около недели, графики рынков и календарь показывает TradingView, потоки ETF приходят с SoSoValue и The Block, вероятности по заседаниям ФРС раз в час обновляются с биржи прогнозов Kalshi, текущая ставка берётся из данных ФРС (FRED), ставки на ближайшее решение идут с рынка исходов Hyperliquid. История цены и реализованной цены с 2011 года взята у Bitbo, шансы касания уровней считаются по индексу волатильности Deribit, индекс страха и жадности отдаёт alternative.me, стейблкоины и выручку протоколов считает DefiLlama, капитализацию токенов даёт CoinGecko. Утренний отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Калькулятор вольта считает условный пример. Это не инвестиционная рекомендация.
   </footer>
 </div>
 
@@ -1155,18 +1153,6 @@ function renderHero(){
     sub.textContent = "Цена появится вместе с отчётом";
   }
 
-  let v = "—", vs = S.targets.length ? "" : "Цели появятся вместе с отчётом";
-  if (S.targets.length && now){
-    const below = S.targets.filter((t) => t.price < now.price);
-    const reached = S.targets.length - below.length;
-    if (!below.length){ v = "Все пройдены"; vs = "Цена ниже всех " + S.targets.length + " целей"; }
-    else {
-      v = pct((below[0].price / now.price - 1) * 100);
-      vs = "до " + usd(below[0].price) + (reached ? ", уже пройдено целей: " + reached : "");
-    }
-  } else if (S.targets.length){ v = usd(S.targets[0].price); vs = "верхняя цель"; }
-  $("hNext").textContent = v; $("hNextSub").textContent = vs;
-
   const vn = vaultNow();
   if (vn && vn.v.ret1m != null){
     signTile("hVault", vn.v.ret1m, pct(vn.v.ret1m));
@@ -1336,7 +1322,7 @@ function renderLevels(){
   const rows = set.levels.map((l) => ({name: l.name, v: l.value, note: l.note, stale: l.stale, goal: false}))
     .concat(S.targets.map((t) => ({name: "Цель на покупку", v: t.price, note: t.note, stale: false, goal: true})));
   if (!rows.length){
-    tb.append(h("tr", null, h("td", {colspan: 3, class: "muted", text: "Уровни появятся вместе с отчётом."})));
+    tb.append(h("tr", null, h("td", {colspan: 3, class: "muted", text: "Уровни сейчас не загрузились."})));
     return;
   }
   rows.sort((a, b) => b.v - a.v);
@@ -1791,7 +1777,7 @@ async function loadCandles(){
     data = rows.map(bar); vols = rows.map((r, i) => volBar(r, data[i])); earliest = rows[0].t;
     setAll(); chartOk = true; drawLines(); legend(data[data.length - 1]);
     chart.timeScale().setVisibleLogicalRange({from: Math.max(0, data.length - 140), to: data.length + 6});
-    note.textContent = "Свечи BTC на Hyperliquid (" + (mkt === "spot" ? "спот, пара UBTC/USDC" : "бессрочный контракт") + "), обновляются в реальном времени. Тяните график, чтобы листать историю; колесо мыши или щипок меняют масштаб, двойной щелчок по шкале цены возвращает автомасштаб. Оранжевые линии: цели на покупку, серые: рыночные уровни.";
+    note.textContent = "Свечи BTC на Hyperliquid (" + (mkt === "spot" ? "спот, пара UBTC/USDC" : "бессрочный контракт") + "), обновляются в реальном времени. Тяните график, чтобы листать историю; колесо мыши или щипок меняют масштаб, двойной щелчок по шкале цены возвращает автомасштаб. Серые пунктирные линии: рыночные уровни.";
     wsSubscribe();
   } catch (e){
     if (my !== gen) return;
@@ -2558,7 +2544,7 @@ function setView(v){
   if (!isTv){ mkt = v; try { localStorage.setItem("desk.mkt", mkt); } catch (e){} loadCandles(); return; }
   for (const b of document.querySelectorAll("#mk button")) b.setAttribute("aria-pressed", String(b.dataset.mk === "tv"));
   $("mkNote").textContent = "TradingView, спот Hyperliquid BTC/USDC";
-  $("lwNote").textContent = "Виджет TradingView: индикаторы сверху, инструменты рисования слева, инструмент меняется в поиске. Цели и рыночные уровни на нём не рисуются, они есть на графике Hyperliquid (кнопки «Спот» и «Перп»).";
+  $("lwNote").textContent = "Виджет TradingView: индикаторы сверху, инструменты рисования слева, инструмент меняется в поиске. Рыночные уровни на нём не рисуются, они есть на графике Hyperliquid (кнопки «Спот» и «Перп»).";
   if (!tvBtcDone){
     tvBtcDone = true;
     tv("tvBtc", "embed-widget-advanced-chart.js", {autosize: true, symbol: "HYPERLIQUID:BTCUSDC", interval: "D", timezone: "Europe/Warsaw", theme: dark() ? "dark" : "light", style: "1", locale: "ru",
@@ -2801,6 +2787,8 @@ function renderCycle(){
 
   const elD = $("cyDd"); elD.textContent = dd == null ? "—" : pct(dd); sign(elD, dd || 0);
   set("cyDdS", "пик " + usd(peak.px) + ", " + fullDate(peak.d));
+  const hero = $("hCy"); hero.textContent = dd == null ? "—" : pct(dd); sign(hero, dd || 0);
+  set("hCyS", "пик " + usd(peak.px) + " был " + days + " " + plural(days, "день", "дня", "дней") + " назад");
   const ds = H.cycles.map((c) => c.days), dMin = Math.min(...ds), dMax = Math.max(...ds);
   set("cyDays", nf0.format(days));
   set("cyDaysS", H.cycles.length ? "прошлые циклы: дно на " + dMin + "–" + dMax + "-й день" : "");

@@ -136,7 +136,7 @@ async function loadCandles(){
     data = rows.map(bar); vols = rows.map((r, i) => volBar(r, data[i])); earliest = rows[0].t;
     setAll(); chartOk = true; drawLines(); legend(data[data.length - 1]);
     chart.timeScale().setVisibleLogicalRange({from: Math.max(0, data.length - 140), to: data.length + 6});
-    note.textContent = "Свечи BTC на Hyperliquid (" + (mkt === "spot" ? "спот, пара UBTC/USDC" : "бессрочный контракт") + "), обновляются в реальном времени. Тяните график, чтобы листать историю; колесо мыши или щипок меняют масштаб, двойной щелчок по шкале цены возвращает автомасштаб. Оранжевые линии: цели на покупку, серые: рыночные уровни.";
+    note.textContent = "Свечи BTC на Hyperliquid (" + (mkt === "spot" ? "спот, пара UBTC/USDC" : "бессрочный контракт") + "), обновляются в реальном времени. Тяните график, чтобы листать историю; колесо мыши или щипок меняют масштаб, двойной щелчок по шкале цены возвращает автомасштаб. Серые пунктирные линии: рыночные уровни.";
     wsSubscribe();
   } catch (e){
     if (my !== gen) return;
@@ -903,7 +903,7 @@ function setView(v){
   if (!isTv){ mkt = v; try { localStorage.setItem("desk.mkt", mkt); } catch (e){} loadCandles(); return; }
   for (const b of document.querySelectorAll("#mk button")) b.setAttribute("aria-pressed", String(b.dataset.mk === "tv"));
   $("mkNote").textContent = "TradingView, спот Hyperliquid BTC/USDC";
-  $("lwNote").textContent = "Виджет TradingView: индикаторы сверху, инструменты рисования слева, инструмент меняется в поиске. Цели и рыночные уровни на нём не рисуются, они есть на графике Hyperliquid (кнопки «Спот» и «Перп»).";
+  $("lwNote").textContent = "Виджет TradingView: индикаторы сверху, инструменты рисования слева, инструмент меняется в поиске. Рыночные уровни на нём не рисуются, они есть на графике Hyperliquid (кнопки «Спот» и «Перп»).";
   if (!tvBtcDone){
     tvBtcDone = true;
     tv("tvBtc", "embed-widget-advanced-chart.js", {autosize: true, symbol: "HYPERLIQUID:BTCUSDC", interval: "D", timezone: "Europe/Warsaw", theme: dark() ? "dark" : "light", style: "1", locale: "ru",
