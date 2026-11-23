@@ -1,6 +1,6 @@
-{"v":3,"updated":"2026-11-23T12:21:45Z","oddsAt":"2026-11-23T12:21:45Z","source":"Kalshi","sourceUrl":"https://kalshi.com/markets/kxfeddecision","band":[3.75,4.0],"bandAsOf":"2026-11-22","last":{"date":"2026-10-28","move":0},
+{"v":3,"updated":"2026-11-23T12:25:14Z","oddsAt":"2026-11-23T12:25:14Z","source":"Kalshi","sourceUrl":"https://kalshi.com/markets/kxfeddecision","band":[3.75,4.0],"bandAsOf":"2026-11-22","last":{"date":"2026-10-28","move":0},
 "meetings":[
-{"date":"2026-12-09","up":93.5,"hold":5.5,"down":1.0,"up25":91.0,"down25":0.5,"p1":[91.5,7.5,1.0],"vol":21659785},
+{"date":"2026-12-09","up":93.5,"hold":5.5,"down":1.0,"up25":91.0,"down25":0.5,"p1":[91.5,7.5,1.0],"vol":21659972},
 {"date":"2027-01-27","up":52.7,"hold":43.4,"down":3.9,"up25":51.2,"down25":3.4,"p1":[48.8,48.3,2.9],"vol":596262},
 {"date":"2027-03-17","up":48.8,"hold":46.3,"down":5.0,"up25":47.3,"down25":4.0,"p1":[51.0,43.8,5.2],"vol":136209},
 {"date":"2027-04-28","up":16.5,"hold":68.7,"down":14.8,"up25":15.4,"down25":11.5,"p1":[17.8,67.6,14.6],"vol":133729},
