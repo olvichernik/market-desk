@@ -2,7 +2,7 @@ name: Обновление данных
 
 # Keeps the data the site cannot fetch from a browser fresh, without anyone's computer:
 # fed.json (odds for each Fed meeting from Kalshi, the target range from FRED) and
-# levels.json (bitcoin's realized price and 200-week average from Woocharts, BGeometrics as a second source).
+# levels.json (bitcoin's realized price from BGeometrics).
 # The hourly result goes to the "data" branch, which the site reads; a copy is committed to main about once a day.
 on:
   schedule:

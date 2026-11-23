@@ -740,7 +740,7 @@ body.noscroll{overflow:hidden}
   </section>
 
   <footer>
-Цена, график, фандинг и все цифры вольта приходят с Hyperliquid в реальном времени, реализованная цена и 200-недельная средняя раз в несколько часов обновляются по данным Woocharts и BGeometrics, графики рынков и календарь показывает TradingView, потоки ETF приходят с SoSoValue и The Block, вероятности по заседаниям ФРС раз в час обновляются с биржи прогнозов Kalshi, текущая ставка берётся из данных ФРС (FRED), ставки на ближайшее решение идут с рынка исходов Hyperliquid. Утренний отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
+Цена, график, фандинг и все цифры вольта приходят с Hyperliquid в реальном времени, 200-недельная средняя и минимум за год считаются по свечам Hyperliquid, реализованная цена приходит от BGeometrics с задержкой около недели, графики рынков и календарь показывает TradingView, потоки ETF приходят с SoSoValue и The Block, вероятности по заседаниям ФРС раз в час обновляются с биржи прогнозов Kalshi, текущая ставка берётся из данных ФРС (FRED), ставки на ближайшее решение идут с рынка исходов Hyperliquid. Утренний отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
   </footer>
 </div>
 
@@ -2129,19 +2129,18 @@ function renderFed(){
   $("fdSchedNote").replaceChildren("Даты: ", link("календарь ФРС", CAL ? CAL.calUrl : ""), ". Решение объявляют во второй день в 14:00 по Нью-Йорку, время в таблице местное, даты 2027 года предварительные.");
 }
 
-/* ---------- market levels: realized price and the 200-week average (levels.json, refreshed by the GitHub job)
-   and the 52-week low from Hyperliquid's daily candles. Nothing here comes from the morning report. ---------- */
-const LV_NAMES = {wma200: "200-недельная средняя", realized: "Реализованная цена"};
-let lvFeed = null, lvLow = null;
+/* ---------- market levels. Two are computed here from Hyperliquid's own candles (the 200-week average and the
+   yearly low); the realized price comes from levels.json, refreshed by the GitHub job. Nothing comes from the morning report. ---------- */
+const LV_NAMES = {realized: "Реализованная цена"};
+let lvFeed = null, lvLow = null, lvWma = null;
 function applyLevels(){
-  const out = [];
+  const out = [], old = isoOf(Date.now() - 14 * 864e5);
+  if (lvWma) out.push({key: "wma200", name: "200-недельная средняя", value: lvWma, note: "по свечам Hyperliquid", stale: false});
   if (lvLow) out.push({key: "low52w", name: "Минимум за год", value: lvLow, note: "по свечам Hyperliquid", stale: false});
-  const old = isoOf(Date.now() - 14 * 864e5);
   const feed = lvFeed ? lvFeed.levels.filter((l) => l.asOf >= old) : [];   // a value that stopped updating hides itself
   for (const l of feed) out.push({key: l.key, name: LV_NAMES[l.key], value: l.value, note: "на " + isoDay(l.asOf) + (l.src ? ", " + l.src : ""), stale: false});
   out.sort((a, b) => b.value - a.value);
-  const parts = feed.map((l) => LV_NAMES[l.key].toLowerCase() + " на " + isoDay(l.asOf) + (l.src ? " (" + l.src + ")" : ""));
-  S.lv = {date: null, levels: out, note: [parts.join(", "), lvLow ? "минимум за год по свечам Hyperliquid" : ""].filter(Boolean).join("; ")};
+  S.lv = {date: null, levels: out, note: [lvWma || lvLow ? "средняя и минимум считаются по свечам Hyperliquid" : "", ...feed.map((l) => LV_NAMES[l.key].toLowerCase() + ": " + (l.src || "") + ", на " + isoDay(l.asOf))].filter(Boolean).join("; ")};
   D.recalc(); drawLines();
 }
 async function loadLevels(){
@@ -2151,7 +2150,8 @@ async function loadLevels(){
     if (!u) continue;
     try {
       const d = await getJson(u, 6000);
-      const f = {updated: Date.parse(d.updated) || 0, levels: (Array.isArray(d.levels) ? d.levels : []).filter((l) => l && LV_NAMES[l.key] && numOk(l.value) > 1000 && isD(l.asOf)).map((l) => ({key: l.key, value: l.value, asOf: l.asOf, src: typeof l.src === "string" ? l.src.slice(0, 20) : ""}))};
+      const f = {updated: Date.parse(d.updated) || 0, levels: (Array.isArray(d.levels) ? d.levels : []).filter((l) => l && LV_NAMES[l.key] && numOk(l.value) > 1000 && isD(l.asOf))
+        .map((l) => ({key: l.key, value: l.value, asOf: l.asOf, src: typeof l.src === "string" ? l.src.slice(0, 20) : ""}))};
       if (f.levels.length && (!got || f.updated > got.updated)) got = f;
       if (got && Date.now() - got.updated < 12 * 3600e3) break;
     } catch (e){}
@@ -2159,12 +2159,19 @@ async function loadLevels(){
   if (got) lvFeed = got;
   applyLevels();
 }
-async function loadYearLow(){
+async function loadCandleLevels(){
+  const now = Date.now();
   try {
-    const now = Date.now(), rows = await hl({type: "candleSnapshot", req: {coin: "BTC", interval: "1d", startTime: now - 365 * 864e5, endTime: now}});
+    const rows = await hl({type: "candleSnapshot", req: {coin: "BTC", interval: "1d", startTime: now - 365 * 864e5, endTime: now}});
     const lows = rows.filter(sane).map((r) => +r.l).filter((v) => v > 0);
-    if (lows.length > 30){ lvLow = Math.min(...lows); applyLevels(); }
+    if (lows.length > 300) lvLow = Math.min(...lows);
   } catch (e){}
+  try {
+    const rows = await hl({type: "candleSnapshot", req: {coin: "BTC", interval: "1w", startTime: now - 206 * 7 * 864e5, endTime: now}});
+    const closes = rows.filter(sane).sort((a, b) => a.t - b.t).map((r) => +r.c).filter((v) => v > 0).slice(-200);
+    if (closes.length === 200) lvWma = closes.reduce((a, b) => a + b, 0) / 200;   // the current week counts with its latest price
+  } catch (e){}
+  applyLevels();
 }
 
 /* ---------- Fed decision odds: Hyperliquid outcome markets, where the "Yes" price of an outcome is its probability ---------- */
@@ -2319,7 +2326,7 @@ D.opens = () => OPEN;
 D.etf = () => { const k = ETF[eIdx].k, c = SO[k]; return {asset: k, etfDone, days: etfSeries(k).length, live: !!(c && c.rows), err: !!(c && c.err), liveLast: c && c.rows ? c.rows[c.rows.length - 1].date : null, frames: [...document.querySelectorAll("#etf iframe")].map((f) => f.src)}; };
 D.etfReload = (k) => loadSoso(k || ETF[eIdx].k, true);
 D.fed = () => ({sel: fedSel, cal: CAL ? CAL.schedule.length : null, fed: FED && {cur: FED.cur, bandAsOf: FED.bandAsOf, last: FED.last, meetings: FED.meetings.length, hist: FED.hist.length, updated: FED.updated, oddsAt: FED.oddsAt}, dataUrl: fedDataUrl()});
-D.levels = () => ({feed: lvFeed, low: lvLow, set: S.lv});
+D.levels = () => ({feed: lvFeed, low: lvLow, wma: lvWma, set: S.lv});
 D.odds = () => FO && {key: FO.key, at: FO.at, mids: foMids, dayAgo: foDayAgo, range: foRange, pts: Object.fromEntries(Object.entries(foHist).map(([k, v]) => [k, v.length])), series: Object.keys(foSeries).length};
 D.watch = () => ({folders: WL.map((f) => f.name + ":" + f.items.length), fIdx, cur: WL.length ? curSym() : null, tvDone});
 renderLive();
@@ -2334,9 +2341,9 @@ setInterval(() => loadSoso(ETF[eIdx].k), 5 * 60e3);
 loadFed();
 setInterval(renderFed, 60e3);           // the countdown
 setInterval(loadFed, 30 * 60e3);
-loadLevels(); loadYearLow();
+loadLevels(); loadCandleLevels();
 setInterval(loadLevels, 60 * 60e3);
-setInterval(loadYearLow, 6 * 3600e3);
+setInterval(loadCandleLevels, 3600e3);
 loadOutcomes();
 setInterval(pollOdds, 30e3);
 setInterval(loadOddsHistory, 10 * 60e3);
