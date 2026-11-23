@@ -326,8 +326,8 @@ body.noscroll{overflow:hidden}
 }
 .etfbox{height:var(--etf-h);position:relative}
 .etfbox > p{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;color:var(--ink-3);font-size:14px;margin:0}
-/* the embed declares no colour scheme of its own: keep the frame "light" so the browser leaves it transparent over our surface in dark mode too */
-.etfbox iframe{position:relative;z-index:1;display:block;width:100%;height:100%;border:0;border-radius:8px;background:var(--surface);color-scheme:light}
+/* the embed picks its light or dark look from the colour scheme it inherits from this page, so the frame must not override it */
+.etfbox iframe{position:relative;z-index:1;display:block;width:100%;height:100%;border:0;border-radius:8px;background:var(--surface)}
 .etf-links{margin:0;color:var(--ink-3);font-size:13px}
 .etf-links a{color:var(--accent-strong)}
 .ef-read{margin:0;font:500 14px/1.4 var(--f-mono);color:var(--ink-2);min-height:20px}
