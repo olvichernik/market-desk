@@ -296,6 +296,7 @@ rep(`    <div class="panel v-what">`, `    <div class="panel stack" id="vLive" h
           <tbody></tbody>
         </table>
       </div>
+      <p class="hint" id="vPosNote"></p>
       <div class="stack" id="vPnlBox" hidden>
         <h4>Прибыль и убыток вольта за всё время, $</h4>
         <div class="lw-sm" id="vPnlChart"></div>

@@ -294,7 +294,7 @@ async function loadVault(){
     $("vLive").hidden = false;
     $("vlAv").textContent = usdBig(av);
     $("vlLev").textContent = nf2.format(S.liveVault.lev) + "x";
-    $("vlLevS").textContent = "позиций на " + usdBig(ntl);
+    $("vlLevS").textContent = "позиций на " + usdBig(ntl) + " при счёте " + usdBig(av);
     $("vlApr").textContent = typeof det.apr === "number" ? pct(det.apr * 100, 1) : "—";
     $("vlLead").textContent = typeof det.leaderFraction === "number" ? nf2.format(det.leaderFraction * 100) + "%" : "—";
     $("vlStamp").textContent = "Hyperliquid, обновлено в " + clock(Date.now());
@@ -309,12 +309,16 @@ async function loadVault(){
       tb.append(h("tr", null,
         h("td", null, String(p.coin).slice(0, 20), h("span", {class: "sub", text: (long ? "лонг" : "шорт") + ", " + (ntl > 0 ? Math.round(Math.abs(+p.positionValue) / ntl * 100) : 0) + "% позиций"})),
         h("td", {class: "r", text: usd(Math.abs(+p.positionValue))}),
-        h("td", {class: "r", text: p.leverage && p.leverage.value ? p.leverage.value + "x" : "—"}),
+        h("td", {class: "r"}, av > 0 ? nf2.format(Math.abs(+p.positionValue) / av) + "x" : "—",   // the position against the account, not the exchange setting
+          p.leverage && p.leverage.value ? h("span", {class: "sub", text: "лимит " + p.leverage.value + "x"}) : null),
         h("td", {class: "r", text: p.entryPx ? nf2.format(+p.entryPx) : "—"}),
-        h("td", {class: "r", text: p.liquidationPx ? nf2.format(+p.liquidationPx) : "—"}),
+        h("td", {class: "r", text: p.liquidationPx ? nf2.format(+p.liquidationPx) : "нет"}),
         h("td", {class: "r"}, h("span", {class: pnl > 0 ? "up" : pnl < 0 ? "down" : null, text: (pnl > 0 ? "+" : "") + usd(Math.round(pnl))}))));
     }
 
+    $("vPosNote").textContent = pos.length ? "Плечо: размер позиции к счёту вольта, по всем позициям в сумме выходит общее плечо " + nf2.format(S.liveVault.lev)
+      + "x. Лимит: настройка на бирже, до скольких раз позицию разрешено увеличить; сама она ничего не говорит о размере позиции."
+      + (pos.some((x) => x.liquidationPx) ? "" : " Цены ликвидации нет: позиции в сумме не больше счёта, и он не обнулится, пока активы не упадут почти до нуля.") : "";
     const all = (det.portfolio || []).find((x) => x && x[0] === "allTime");
     const hist = all && all[1] && Array.isArray(all[1].pnlHistory) ? all[1].pnlHistory : [];
     const seen = new Set(); const pts = [];
