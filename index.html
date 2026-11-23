@@ -1602,7 +1602,7 @@ function paintQuotes(){
     const q = Q[el.dataset.h], o = OPEN[el.dataset.h];
     el.classList.remove("up", "down");
     if (!q || !o || o.day !== day){ el.textContent = "…"; el.removeAttribute("title"); continue; }
-    const ch = (q.px / o.o - 1) * 100;
+    const ch = Math.round((q.px / o.o - 1) * 10000) / 100 || 0;
     el.textContent = (ch > 0 ? "▲ " : ch < 0 ? "▼ " : "") + pct(ch, 2);
     el.title = "Дневная свеча с 00:00 UTC, перп " + el.dataset.h + " на Hyperliquid: открытие " + nf2.format(o.o) + ", сейчас " + nf2.format(q.px);
     if (ch > 0) el.classList.add("up"); else if (ch < 0) el.classList.add("down");
