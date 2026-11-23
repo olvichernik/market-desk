@@ -20,6 +20,7 @@ on:
       - ".github/workflows/feeds.yml"
       - "tools/feeds.py"
       - "fed-calendar.json"
+      - "data.json"          # the morning report's push also refreshes the feeds: a backstop for a skipped schedule
 
 permissions:
   contents: write
