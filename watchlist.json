@@ -1,0 +1,23 @@
+{
+"folders": [
+{"name": "Альты", "items": [
+  {"s": "BINANCE:ETHUSDT", "n": "Ethereum"}, {"s": "BINANCE:SOLUSDT", "n": "Solana"}, {"s": "BYBIT:HYPEUSDT", "n": "Hyperliquid"},
+  {"s": "BINANCE:AAVEUSDT", "n": "Aave"}, {"s": "BINANCE:UNIUSDT", "n": "Uniswap"}, {"s": "BINANCE:ONDOUSDT", "n": "Ondo"}, {"s": "BINANCE:ZROUSDT", "n": "LayerZero"},
+  {"s": "BINANCE:ETHBTC", "n": "ETH/BTC"}, {"s": "CRYPTOCAP:BTC.D", "n": "Доминация BTC"}, {"s": "CRYPTOCAP:TOTAL3", "n": "Альты без BTC и ETH"}]},
+{"name": "Индексы", "items": [
+  {"s": "OANDA:SPX500USD", "n": "S&P 500"}, {"s": "OANDA:NAS100USD", "n": "Nasdaq 100"}, {"s": "OANDA:US30USD", "n": "Dow Jones"}, {"s": "TVC:VIX", "n": "VIX"},
+  {"s": "KRX:KOSPI", "n": "KOSPI"}, {"s": "TWSE:IX0001", "n": "TAIEX"}, {"s": "OANDA:JP225USD", "n": "Nikkei 225"}, {"s": "OANDA:HK33HKD", "n": "Hang Seng"}, {"s": "OANDA:DE30EUR", "n": "DAX"}]},
+{"name": "Акции AI", "items": [
+  {"s": "NASDAQ:NVDA", "n": "Nvidia"}, {"s": "NYSE:TSM", "n": "TSMC"}, {"s": "NASDAQ:MU", "n": "Micron"}, {"s": "KRX:000660", "n": "SK Hynix"}, {"s": "NASDAQ:SNDK", "n": "Sandisk"},
+  {"s": "NASDAQ:INTC", "n": "Intel"}, {"s": "NASDAQ:AVGO", "n": "Broadcom"}, {"s": "NASDAQ:AMD", "n": "AMD"}, {"s": "NASDAQ:ASML", "n": "ASML"}, {"s": "NASDAQ:SMH", "n": "Чипы, ETF SMH"},
+  {"s": "NASDAQ:MSFT", "n": "Microsoft"}, {"s": "NASDAQ:GOOGL", "n": "Alphabet"}, {"s": "NASDAQ:META", "n": "Meta"}, {"s": "NASDAQ:AMZN", "n": "Amazon"}, {"s": "NYSE:ORCL", "n": "Oracle"}]},
+{"name": "Сырьё", "items": [
+  {"s": "OANDA:XAUUSD", "n": "Золото"}, {"s": "OANDA:XAGUSD", "n": "Серебро"}, {"s": "TVC:UKOIL", "n": "Нефть Brent"}, {"s": "TVC:USOIL", "n": "Нефть WTI"},
+  {"s": "OANDA:XCUUSD", "n": "Медь"}, {"s": "OANDA:NATGASUSD", "n": "Газ"}]},
+{"name": "Валюты и ставки", "items": [
+  {"s": "TVC:DXY", "n": "Индекс доллара"}, {"s": "FX:EURUSD", "n": "EUR/USD"}, {"s": "FX:USDJPY", "n": "USD/JPY"}, {"s": "FX_IDC:USDPLN", "n": "USD/PLN"}, {"s": "FX_IDC:USDUAH", "n": "USD/UAH"},
+  {"s": "TVC:US10Y", "n": "US 10Y"}, {"s": "TVC:US02Y", "n": "US 2Y"}]},
+{"name": "Крипто-акции", "items": [
+  {"s": "NASDAQ:MSTR", "n": "Strategy"}, {"s": "NASDAQ:COIN", "n": "Coinbase"}, {"s": "NASDAQ:MARA", "n": "MARA"}, {"s": "NASDAQ:IBIT", "n": "ETF IBIT"}]}
+]
+}

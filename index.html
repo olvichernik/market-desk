@@ -240,6 +240,9 @@ body.noscroll{overflow:hidden}
 .tvbox.lw-tv{height:520px}
 @media (min-width:760px){.tvbox.lw-tv{height:640px}}
 .chart-panel.expanded .tvbox.lw-tv{flex:1;min-height:0;height:auto}
+.chips button.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tvbox.big{height:560px}
+@media (min-width:760px){.tvbox.big{height:640px}}
 </style>
 </head>
 <body>
@@ -421,9 +424,12 @@ body.noscroll{overflow:hidden}
   <section class="sec" id="markets">
     <div class="sec-head">
       <h2>Рынки</h2>
-      <p class="sec-note">Графики и календарь TradingView. Инструмент меняется в списке справа от графика</p>
+      <p class="sec-note">Графики, котировки и календарь TradingView</p>
     </div>
-    <div class="panel"><div class="tvbox" id="tvChart"><p>График TradingView загружается. Если он не появился, виджет заблокирован браузером или расширением.</p></div></div>
+    <div class="seg" id="fold" role="group" aria-label="Папки"></div>
+    <div class="chips" id="foldItems" role="group" aria-label="Инструменты папки"></div>
+    <div class="panel"><div class="tvbox big" id="tvChart"><p>График TradingView загружается. Если он не появился, виджет заблокирован браузером или расширением.</p></div></div>
+    <div class="panel"><div class="tvbox" id="tvQuotes"><p>Котировки папки загружаются.</p></div></div>
     <div class="panel"><div class="tvbox cal" id="tvCal"><p>Экономический календарь TradingView загружается.</p></div></div>
   </section>
 
@@ -1469,16 +1475,52 @@ function tv(hostId, file, cfg){
   for (const old of host.querySelectorAll(".tradingview-widget-container")) old.remove();
   host.append(box);
 }
-let tvDone = false;
+/* folders: a watchlist grouped by asset class, each instrument opens in the TradingView chart */
+let tvDone = false, WL = [], fIdx = 0, picked = {};
+const symOk = (s) => typeof s === "string" && /^[A-Za-z0-9_.]{1,20}:[A-Za-z0-9_.!]{1,24}$/.test(s);
+try { picked = JSON.parse(localStorage.getItem("desk.picked") || "{}") || {}; } catch (e){ picked = {}; }
+const curSym = () => { const f = WL[fIdx]; const p = picked[f.name]; return f.items.some((it) => it.s === p) ? p : f.items[0].s; };
+async function loadWatch(){
+  try {
+    const d = await (await fetch("watchlist.json", {cache: "no-store"})).json();
+    WL = (Array.isArray(d.folders) ? d.folders : []).slice(0, 12).map((f) => ({
+      name: String(f.name || "").slice(0, 30),
+      items: (Array.isArray(f.items) ? f.items : []).slice(0, 30).filter((it) => it && symOk(it.s)).map((it) => ({s: it.s, n: String(it.n || it.s).slice(0, 30)})),
+    })).filter((f) => f.name && f.items.length);
+    let saved = null; try { saved = localStorage.getItem("desk.fold"); } catch (e){}
+    const i = WL.findIndex((f) => f.name === saved); fIdx = i < 0 ? 0 : i;
+  } catch (e){ WL = []; }
+  renderFolders();
+}
+function renderFolders(){
+  if (!WL.length){ $("fold").replaceChildren(); $("foldItems").replaceChildren(); return; }
+  const cur = curSym();
+  $("fold").replaceChildren(...WL.map((f, i) => h("button", {type: "button", "aria-pressed": String(i === fIdx), text: f.name, onclick: () => {
+    fIdx = i; try { localStorage.setItem("desk.fold", f.name); } catch (e){}
+    renderFolders(); if (tvDone){ showChart(); showQuotes(); }
+  }})));
+  $("foldItems").replaceChildren(...WL[fIdx].items.map((it) => h("button", {type: "button", class: it.s === cur ? "on" : null, "aria-pressed": String(it.s === cur), text: it.n, title: it.s, onclick: () => {
+    picked[WL[fIdx].name] = it.s; try { localStorage.setItem("desk.picked", JSON.stringify(picked)); } catch (e){}
+    renderFolders(); if (tvDone) showChart(); else initTv();
+  }})));
+}
+const tvTheme = () => dark() ? "dark" : "light";
+function showChart(){
+  tv("tvChart", "embed-widget-advanced-chart.js", {autosize: true, symbol: WL.length ? curSym() : "OANDA:NAS100USD", interval: "D", timezone: "Europe/Warsaw", theme: tvTheme(), style: "1", locale: "ru",
+    allow_symbol_change: true, hide_side_toolbar: false, withdateranges: true, calendar: false, support_host: "https://www.tradingview.com"});
+}
+function showQuotes(){
+  const box = $("tvQuotes");
+  if (!WL.length){ box.parentNode.hidden = true; return; }
+  const f = WL[fIdx];
+  box.style.height = (110 + f.items.length * 50) + "px";
+  tv("tvQuotes", "embed-widget-market-quotes.js", {width: "100%", height: "100%", symbolsGroups: [{name: f.name, symbols: f.items.map((it) => ({name: it.s, displayName: it.n}))}],
+    showSymbolLogo: true, isTransparent: false, colorTheme: tvTheme(), locale: "ru"});
+}
 function initTv(){
   if (tvDone) return; tvDone = true;
-  const theme = dark() ? "dark" : "light";
-  tv("tvChart", "embed-widget-advanced-chart.js", {
-    autosize: true, symbol: "OANDA:NAS100USD", interval: "D", timezone: "Europe/Warsaw", theme, style: "1", locale: "ru",
-    allow_symbol_change: true, calendar: false, hide_side_toolbar: true, support_host: "https://www.tradingview.com",
-    watchlist: ["OANDA:NAS100USD", "OANDA:SPX500USD", "KRX:KOSPI", "TWSE:TAIEX", "TVC:NI225", "HSI:HSTECH", "TVC:DXY", "FX:USDJPY", "TVC:US10Y", "OANDA:XAUUSD", "TVC:UKOIL", "NASDAQ:NVDA", "NYSE:TSM", "NASDAQ:MU", "BINANCE:BTCUSDT"],
-  });
-  tv("tvCal", "embed-widget-events.js", {colorTheme: theme, isTransparent: false, width: "100%", height: "100%", locale: "ru", importanceFilter: "0,1", countryFilter: "us,eu,jp,cn,kr,gb"});
+  showChart(); showQuotes();
+  tv("tvCal", "embed-widget-events.js", {colorTheme: tvTheme(), isTransparent: false, width: "100%", height: "100%", locale: "ru", importanceFilter: "0,1", countryFilter: "us,eu,jp,cn,kr,gb"});
 }
 
 /* ---------- wiring ---------- */
@@ -1510,6 +1552,7 @@ if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEven
   tvDone = false; initTv();
   if (tvBtcDone){ tvBtcDone = false; if (!$("tvBtc").hidden) setView("tv"); }
 });
+loadWatch();
 if ("IntersectionObserver" in window){
   const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)){ io.disconnect(); initTv(); } }, {rootMargin: "600px"});
   io.observe($("markets"));
@@ -1517,6 +1560,7 @@ if ("IntersectionObserver" in window){
 
 D.chartState = () => ({tf, mkt, bars: data.length, wsOpen, noMore, first: data[0] && data[0].time, last: data[data.length - 1], range: chart ? chart.timeScale().getVisibleLogicalRange() : null});
 D.loadMore = loadMore;
+D.watch = () => ({folders: WL.map((f) => f.name + ":" + f.items.length), fIdx, cur: WL.length ? curSym() : null, tvDone});
 renderLive();
 tick(); loadCandles(); loadVault(); wsConnect();
 try { if (localStorage.getItem("desk.view") === "tv") setView("tv"); } catch (e){}
