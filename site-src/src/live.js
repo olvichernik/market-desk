@@ -454,7 +454,7 @@ function showQuotes(){
   box.parentNode.hidden = !WL.length;
   if (!WL.length) return;
   const f = WL[fIdx];
-  box.style.height = (110 + f.items.length * 50) + "px";
+  box.style.height = (84 + f.items.length * 38) + "px";   // a row of the widget is about 36px tall
   tv("tvQuotes", "embed-widget-market-quotes.js", {width: "100%", height: "100%", symbolsGroups: [{name: f.name, symbols: f.items.map((it) => ({name: it.s, displayName: it.n}))}],
     showSymbolLogo: true, isTransparent: true, colorTheme: tvTheme(), locale: "ru"});
 }
