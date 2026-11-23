@@ -351,7 +351,21 @@ body.noscroll{overflow:hidden}
 @media (min-width:1100px){
   .fed-grid{grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:start}
   #fedNext .tiles.q{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #fedNext{order:1} #fedSched{order:2} #fedOdds{order:3;grid-column:1 / -1}
 }
+@media (min-width:1700px){
+  .fed-grid.has-odds{grid-template-columns:minmax(0,5fr) minmax(0,6fr) minmax(0,6fr);align-items:stretch}
+  .fed-grid.has-odds #fedNext,.fed-grid.has-odds #fedOdds,.fed-grid.has-odds #fedSched{order:0;grid-column:auto}
+  .fed-grid.has-odds .fo-chart{flex:1;min-height:340px;height:auto}
+}
+/* three series, fixed order: hike, hold, cut (validated for both themes) */
+:root{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a}
+@media (prefers-color-scheme: dark){:root{--s1:#3987e5;--s2:#d95926;--s3:#199e70}}
+.fo-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+.fo-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+.fo-chart{height:300px;min-width:0}
+.fo-read{margin:0;font:500 12.5px/1.4 var(--f-mono);color:var(--ink-2);min-height:18px}
+@media (max-width:559px){.fo-tiles{gap:6px} .fo-tiles .tile{padding:10px 8px} .fo-tiles .tile-v{font-size:19px}}
 .fd-tbl td{vertical-align:middle}
 .fd-tbl td.r b{font-weight:700}
 .fd-bar{height:6px;border-radius:3px;background:var(--sunken);margin-top:6px;min-width:110px;max-width:360px}
@@ -620,6 +634,19 @@ body.noscroll{overflow:hidden}
         </div>
         <p class="hint" id="fdNote"></p>
       </div>
+      <div class="panel stack" id="fedOdds" hidden>
+        <div class="sec-head"><h3 id="foT">Ставки на решение ФРС</h3><p class="sec-note" id="foS">рынок исходов Hyperliquid</p></div>
+        <div class="tiles fo-tiles" id="foTiles"></div>
+        <div class="chart-bar">
+          <div class="seg" id="foRange" role="group" aria-label="Период графика">
+            <button type="button" data-r="all" aria-pressed="true">Всё время</button>
+            <button type="button" data-r="7d" aria-pressed="false">7 дней</button>
+          </div>
+          <p class="fo-read" id="foRead" aria-live="polite"></p>
+        </div>
+        <div class="fo-chart" id="foChart"></div>
+        <p class="hint" id="foNote"></p>
+      </div>
       <div class="panel stack" id="fedSched">
         <div class="sec-head"><h3>График заседаний</h3><p class="sec-note">нажмите на строку, чтобы открыть вероятности по этому заседанию</p></div>
         <div class="scroll">
@@ -710,7 +737,7 @@ body.noscroll{overflow:hidden}
   </section>
 
   <footer>
-    Цена, график, фандинг и позиции вольта приходят с Hyperliquid в реальном времени, графики рынков и календарь показывает TradingView, потоки ETF приходят с SoSoValue и The Block, вероятности по ставке ФРС взяты у Investing.com. Утренний отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
+    Цена, график, фандинг и позиции вольта приходят с Hyperliquid в реальном времени, графики рынков и календарь показывает TradingView, потоки ETF приходят с SoSoValue и The Block, вероятности по ставке ФРС взяты у Investing.com, ставки на решение ФРС идут с рынка исходов Hyperliquid. Утренний отчёт обновляется по будням около 08:00 по Варшаве, у каждой цифры подписано время сбора. Цели на покупку — личные ориентиры автора страницы, а калькуляторы считают условные примеры. Это не инвестиционная рекомендация.
   </footer>
 </div>
 
@@ -1973,7 +2000,7 @@ async function loadFed(){
         .map((x) => ({start: x.start, end: x.end, sep: x.sep === true, noDecision: x.noDecision === true, at: nyInstant(x.end, 14)})).sort((a, b) => a.at - b.at),
     };
   } catch (e){ FED = null; }
-  renderFed();
+  renderFed(); renderOdds();
 }
 function renderFed(){
   const grid = $("fedGrid");
@@ -2029,6 +2056,112 @@ function renderFed(){
   $("fdSchedNote").replaceChildren("Даты: ", link("календарь ФРС", FED.calUrl), ". Решение объявляют во второй день в 14:00 по Нью-Йорку, время в таблице местное, даты 2027 года предварительные. «В среднем»: середина диапазона, взвешенная по вероятностям, и её отличие от текущей.");
 }
 
+/* ---------- Fed decision odds: Hyperliquid outcome markets, where the "Yes" price of an outcome is its probability ---------- */
+const LEGS = [
+  {k: "up", re: /policyRateIncrease$/, name: "Повышение", cssVar: "--s1"},
+  {k: "hold", re: /policyRateNoChange$/, name: "Без изменений", cssVar: "--s2"},
+  {k: "down", re: /policyRateDecrease$/, name: "Снижение", cssVar: "--s3"},
+];
+const FO_RANGES = {all: {interval: "4h", step: 14400, ms: 1000 * 14400e3}, "7d": {interval: "1h", step: 3600, ms: 7 * 864e5}};
+let FO = null, foMids = null, foMidsAt = 0, foDayAgo = {}, foRange = "all", foChart = null, foSeries = {}, foHist = {}, foGen = 0;
+try { if (localStorage.getItem("desk.fo") === "7d") foRange = "7d"; } catch (e){}
+const tzOff = () => -new Date().getTimezoneOffset() * 60;
+async function loadOutcomes(){
+  try {
+    const m = await hl({type: "outcomeMeta"}), now = Date.now();
+    const outs = new Map((Array.isArray(m.outcomes) ? m.outcomes : []).map((o) => [o.outcome, o]));
+    const cand = (Array.isArray(m.questions) ? m.questions : [])
+      .filter((q) => q && q.name === "template:policyRateDecision" && /(^|\|)institution:Federal Open Market Committee(\||$)/.test(String(q.description))
+        && Array.isArray(q.namedOutcomes) && !(q.settledNamedOutcomes || []).length)
+      .map((q) => { const t = /(?:^|\|)scheduledDecision:(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d)/.exec(String(q.description)); return {q, at: t ? Date.UTC(+t[1], +t[2] - 1, +t[3], +t[4], +t[5]) : 0}; })
+      .filter((x) => x.at > now - 2 * 864e5).sort((a, b) => a.at - b.at)[0];
+    const legs = cand ? LEGS.map((L) => { const id = cand.q.namedOutcomes.find((n) => outs.has(n) && L.re.test(String(outs.get(n).name))); return id == null ? null : Object.assign({coin: "#" + id + "0"}, L); }).filter(Boolean) : [];
+    const key = legs.map((l) => l.coin).join();
+    if (legs.length < 2) FO = null;
+    else if (!FO || FO.key !== key){
+      if (foChart) for (const k of Object.keys(foSeries)) foChart.removeSeries(foSeries[k]);
+      foSeries = {}; foHist = {}; foDayAgo = {}; foMids = null;
+      FO = {key, at: cand.at, legs};
+    }
+  } catch (e){ /* keep the market we already have */ }
+  renderOdds();
+  if (FO){ pollOdds(); loadOddsHistory(); }
+}
+async function pollOdds(){
+  if (!FO || document.hidden) return;
+  try {
+    const all = await hl({type: "allMids"}), mids = {};
+    for (const l of FO.legs){ const v = all ? +all[l.coin] : NaN; if (v >= 0 && v <= 1) mids[l.k] = v * 100; }
+    if (Object.keys(mids).length){ foMids = mids; foMidsAt = Date.now(); }
+  } catch (e){}
+  renderOdds(); pushOddsTail();
+}
+async function loadOddsHistory(){
+  if (!FO || document.hidden) return;
+  const g = ++foGen, R = FO_RANGES[foRange], now = Date.now(), key = FO.key;
+  try {
+    const got = await Promise.all(FO.legs.map((l) => hl({type: "candleSnapshot", req: {coin: l.coin, interval: R.interval, startTime: now - R.ms, endTime: now}})));
+    if (g !== foGen || !FO || FO.key !== key) return;
+    const off = tzOff(), cut = now / 1000 + off - 86400;
+    FO.legs.forEach((l, i) => {
+      const pts = (Array.isArray(got[i]) ? got[i] : []).filter((r) => +r.c >= 0 && +r.c <= 1).sort((a, b) => a.t - b.t).map((r) => ({time: Math.floor(r.t / 1000) + off, value: +r.c * 100}));
+      foHist[l.k] = pts.filter((p, j) => !j || p.time > pts[j - 1].time);
+      let v = null; for (const p of foHist[l.k]){ if (p.time <= cut) v = p.value; else break; }
+      foDayAgo[l.k] = v;
+    });
+    drawOdds(); renderOdds();
+  } catch (e){ if (g === foGen) $("foRead").textContent = "История ставок сейчас не загрузилась"; }
+}
+function drawOdds(){
+  if (!LW || !FO) return;
+  if (!foChart){
+    foChart = LW.createChart($("foChart"), Object.assign(chartOpts(), {handleScale: {mouseWheel: false, pinch: true, axisPressedMouseMove: true},
+      localization: {locale: "ru-RU", priceFormatter: (v) => nf0.format(v) + "%"}}));
+    foChart.priceScale("right").applyOptions({scaleMargins: {top: 0.07, bottom: 0.06}});
+    foChart.subscribeCrosshairMove((p) => {
+      if (!FO || !p || p.time == null || !p.seriesData){ $("foRead").textContent = ""; return; }
+      const parts = FO.legs.map((l) => { const d = foSeries[l.k] && p.seriesData.get(foSeries[l.k]); return d ? l.name.toLowerCase() + " " + pc1(d.value) : null; }).filter(Boolean);
+      $("foRead").textContent = parts.length ? new Date(p.time * 1000).toLocaleString("ru-RU", {timeZone: "UTC", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}) + ": " + parts.join(", ") : "";
+    });
+  }
+  for (const l of FO.legs){
+    if (!foSeries[l.k]) foSeries[l.k] = foChart.addLineSeries({color: css(l.cssVar), lineWidth: 2, title: l.name, priceLineVisible: false, lastValueVisible: true,
+      autoscaleInfoProvider: () => ({priceRange: {minValue: 0, maxValue: 100}})});
+    foSeries[l.k].setData(foHist[l.k] || []);
+  }
+  pushOddsTail();
+  foChart.timeScale().fitContent();
+}
+function pushOddsTail(){   // the line ends at the current mid price
+  if (!foChart || !foMids || !FO) return;
+  const step = FO_RANGES[foRange].step, t = Math.floor(Date.now() / 1000 / step) * step + tzOff();
+  for (const l of FO.legs){
+    const sr = foSeries[l.k], v = foMids[l.k], hist = foHist[l.k] || [], last = hist[hist.length - 1];
+    if (!sr || v == null || (last && last.time > t)) continue;
+    sr.update({time: t, value: v});
+  }
+}
+function futOdds(at){   // the same three outcomes from the futures table, for comparison
+  if (!FED || FED.cur == null) return null;
+  const sc = FED.schedule.find((x) => Math.abs(x.at - at) < 12 * 3600e3), m = sc && !sc.noDecision ? FED.meetings.find((x) => x.date === sc.end) : null;
+  if (!m) return null;
+  const sumIf = (f) => m.rows.filter((r) => r.p != null && f(Math.round((r.lo - FED.cur) / 0.25))).reduce((t, r) => t + r.p, 0);
+  return {up: sumIf((st) => st > 0), hold: sumIf((st) => st === 0), down: sumIf((st) => st < 0)};
+}
+function renderOdds(){
+  $("fedOdds").hidden = !FO; $("fedGrid").classList.toggle("has-odds", !!FO);
+  if (!FO) return;
+  const when = dayMonth(FO.at), fut = futOdds(FO.at);
+  $("foT").textContent = "Ставки на решение " + when;
+  $("foS").textContent = "рынок исходов Hyperliquid" + (foMidsAt ? ", обновлено в " + clock(foMidsAt) : "");
+  $("foTiles").replaceChildren(...FO.legs.map((l) => h("div", {class: "tile"},
+    h("div", {class: "lab"}, h("i", {class: "fo-dot", style: "background:var(" + l.cssVar + ")"}), l.name),
+    h("div", {class: "tile-v", text: pc1(foMids ? foMids[l.k] : null)}),
+    h("div", {class: "tile-s", text: [foDayAgo[l.k] != null ? "сутки назад " + pc1(foDayAgo[l.k]) : null, fut ? "по фьючерсам " + pc1(fut[l.k]) : null].filter(Boolean).join(" · ")}))));
+  for (const b of document.querySelectorAll("#foRange button")) b.setAttribute("aria-pressed", String(b.dataset.r === foRange));
+  $("foNote").textContent = "Участники рынка исходов на Hyperliquid ставят деньги на то, что ФРС сделает со ставкой " + when + ". Цена контракта «да» по исходу и есть его вероятность, график показывает, как она менялась. Три исхода торгуются отдельно, поэтому в сумме бывает не ровно 100%.";
+}
+
 /* ---------- wiring ---------- */
 for (const b of document.querySelectorAll("#tf button")){
   b.addEventListener("click", () => { tf = b.dataset.tf; try { localStorage.setItem("desk.tf", tf); } catch (e){} loadCandles(); });
@@ -2057,6 +2190,7 @@ if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEven
   if (pnlChart) pnlChart.applyOptions(chartOpts());
   tvDone = false; initTv();
   if (etfDone) showEtf();
+  if (foChart){ foChart.applyOptions(chartOpts()); if (FO) for (const l of FO.legs) if (foSeries[l.k]) foSeries[l.k].applyOptions({color: css(l.cssVar)}); }
   if (tvBtcDone){ tvBtcDone = false; if (!$("tvBtc").hidden) setView("tv"); }
 });
 const watchReady = loadWatch();   // widgets wait for the watchlist, or they would open with a fallback symbol
@@ -2076,6 +2210,7 @@ D.opens = () => OPEN;
 D.etf = () => { const k = ETF[eIdx].k, c = SO[k]; return {asset: k, etfDone, days: etfSeries(k).length, live: !!(c && c.rows), err: !!(c && c.err), liveLast: c && c.rows ? c.rows[c.rows.length - 1].date : null, frames: [...document.querySelectorAll("#etf iframe")].map((f) => f.src)}; };
 D.etfReload = (k) => loadSoso(k || ETF[eIdx].k, true);
 D.fed = () => FED && {sel: fedSel, cur: FED.cur, meetings: FED.meetings.length, schedule: FED.schedule.length, updated: FED.updated};
+D.odds = () => FO && {key: FO.key, at: FO.at, mids: foMids, dayAgo: foDayAgo, range: foRange, pts: Object.fromEntries(Object.entries(foHist).map(([k, v]) => [k, v.length])), series: Object.keys(foSeries).length};
 D.watch = () => ({folders: WL.map((f) => f.name + ":" + f.items.length), fIdx, cur: WL.length ? curSym() : null, tvDone});
 renderLive();
 tick(); loadCandles(); loadVault(); wsConnect();
@@ -2088,8 +2223,17 @@ setInterval(pollQuotes, 8000);
 setInterval(() => loadSoso(ETF[eIdx].k), 5 * 60e3);
 loadFed();
 setInterval(renderFed, 60e3);           // the countdown
-setInterval(loadFed, 30 * 60e3);   // refetches only when the last try is older than 15 minutes
-document.addEventListener("visibilitychange", () => { if (!document.hidden){ tick(); refreshTail(); loadVault(); pollQuotes(); loadSoso(ETF[eIdx].k); } });
+setInterval(loadFed, 30 * 60e3);
+loadOutcomes();
+setInterval(pollOdds, 30e3);
+setInterval(loadOddsHistory, 10 * 60e3);
+setInterval(loadOutcomes, 60 * 60e3);
+for (const b of document.querySelectorAll("#foRange button")) b.addEventListener("click", () => {
+  if (foRange === b.dataset.r) return;
+  foRange = b.dataset.r; try { localStorage.setItem("desk.fo", foRange); } catch (e){}
+  renderOdds(); loadOddsHistory();
+});   // refetches only when the last try is older than 15 minutes
+document.addEventListener("visibilitychange", () => { if (!document.hidden){ tick(); refreshTail(); loadVault(); pollQuotes(); loadSoso(ETF[eIdx].k); pollOdds(); if (FO && !Object.keys(foHist).length) loadOddsHistory(); } });
 })();
 </script>
 </body>
