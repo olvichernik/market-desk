@@ -53,7 +53,8 @@ jobs:
               age = (dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(s.replace('Z', '+00:00'))).total_seconds()
           except ValueError:
               age = 1e9
-          print('yes' if age > 20 * 3600 else 'no')")
+          # the 03:xx UTC run, far from the morning report's own push; or any run if a day was missed
+          print('yes' if (dt.datetime.now(dt.timezone.utc).hour == 3 and age > 12 * 3600) or age > 30 * 3600 else 'no')")
           if [ "$due" != "yes" ] && [ "${{ github.event_name }}" = "schedule" ]; then
             echo "Копия в main свежая"
             exit 0
