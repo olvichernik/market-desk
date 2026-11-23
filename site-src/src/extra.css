@@ -375,3 +375,11 @@ footer{border-top-color:var(--rule)}
 /* TradingView's transparent widgets: a frame whose colour scheme differs from the page's gets an opaque white backdrop
    from the browser. Their documents declare no scheme (so: light), and this makes the frame agree with them. */
 #tvQuotes iframe,#tvCal iframe{color-scheme:light}
+
+/* Side by side, the calendar is as tall as the quotes table next to it, whatever the folder's length. */
+@media (min-width:1100px){
+  .mk-row2{align-items:stretch}
+  .mk-row2 > .panel{display:flex;flex-direction:column}
+  .mk-row2 .tvbox.cal{flex:1 1 auto;height:auto;min-height:420px}
+  .mk-row2 .tvbox.cal .tradingview-widget-container{position:absolute;inset:0}
+}
