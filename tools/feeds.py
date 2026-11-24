@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Refreshes the data files the site cannot fetch from a browser.
 
-Runs from GitHub Actions on a schedule; no secrets, no dependencies, nobody's computer.
+Runs from GitHub Actions on a schedule; no secrets, no dependencies, nobody's computer. The schedule starts it several
+times an hour because GitHub skips many scheduled starts; every part below refreshes only when its data has aged.
 
 fed.json: the Fed's current target range and market odds for each coming meeting
   - odds per meeting: Kalshi's public market-data API (series KXFEDDECISION: hike, hold, cut)
@@ -507,6 +508,13 @@ def main():
         old = json.load(open(OUT, encoding="utf-8"))
     except Exception:
         old = {}
+    try:
+        odds_age = (now - dt.datetime.fromisoformat(str(old.get("oddsAt")).replace("Z", "+00:00"))).total_seconds()
+    except ValueError:
+        odds_age = 1e9
+    if odds_age < 50 * 60 and not FORCE and not args:      # the job is started several times an hour; the odds are read once
+        print("fed.json is fresh")
+        return
     doc = {"v": 3, "updated": old.get("updated"), "oddsAt": old.get("oddsAt"), "source": "Kalshi", "sourceUrl": "https://kalshi.com/markets/kxfeddecision",
            "band": old.get("band"), "bandAsOf": old.get("bandAsOf"), "last": old.get("last"),
            "meetings": old.get("meetings") if old.get("v") == 3 else [], "hist": old.get("hist") if old.get("v") == 3 else []}
