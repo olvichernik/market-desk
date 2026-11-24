@@ -770,11 +770,12 @@ span.lq-key{color:var(--ink);border-style:dashed}
 @media (prefers-reduced-motion: reduce){button.lq-key{transition:none}}
 
 /* ================= the summary of signals =================
-   One scale for every reading: blue is a cold market, grey is the usual state, orange is an overheated one.
-   The word says the state; the lit segment only repeats it. */
-:root{--cold2:#2a78d6;--cold1:#7fa9db;--mid:#8d98a8;--hot1:#e3a35c;--hot2:#e9820c}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--cold2:#4a95ee;--cold1:#6f95c4;--mid:#7d8898;--hot1:#c9935a;--hot2:#f7931a}}
-:root[data-theme="dark"]{--cold2:#4a95ee;--cold1:#6f95c4;--mid:#7d8898;--hot1:#c9935a;--hot2:#f7931a}
+   One scale for every reading, in the colours a crypto reader knows from the fear and greed index: red for fear and
+   money leaving, through orange and yellow, to green for greed and money arriving. The word says the state and the
+   place of the lit segment repeats it, so the colour is never the only carrier. */
+:root{--tm1:#d93a40;--tm2:#d9731f;--tm3:#b8960f;--tm4:#6fa82e;--tm5:#159a5e}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--tm1:#ea4a4f;--tm2:#ea8a3a;--tm3:#d9b93a;--tm4:#8fc24f;--tm5:#22b573}}
+:root[data-theme="dark"]{--tm1:#ea4a4f;--tm2:#ea8a3a;--tm3:#d9b93a;--tm4:#8fc24f;--tm5:#22b573}
 .temp .sec-head{align-items:baseline}
 .temp .tm-t{font:600 18px/1.25 var(--f-display);letter-spacing:-.01em;margin:0}
 .tm-grid{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -791,11 +792,11 @@ a.tm:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .tm-m{display:flex;gap:3px;margin:9px 0 7px;align-items:center}
 .tm-m i{flex:1;height:4px;border-radius:2px;background:var(--rule-strong);opacity:.55}
 .tm-m i.on{height:8px;border-radius:3px;opacity:1}
-.tm[data-s="-2"] .tm-m i.on{background:var(--cold2);box-shadow:0 0 10px -2px var(--cold2)}
-.tm[data-s="-1"] .tm-m i.on{background:var(--cold1)}
-.tm[data-s="0"] .tm-m i.on{background:var(--mid)}
-.tm[data-s="1"] .tm-m i.on{background:var(--hot1)}
-.tm[data-s="2"] .tm-m i.on{background:var(--hot2);box-shadow:0 0 10px -2px var(--hot2)}
+.tm[data-s="-2"] .tm-m i.on{background:var(--tm1);box-shadow:0 0 10px -2px var(--tm1)}
+.tm[data-s="-1"] .tm-m i.on{background:var(--tm2)}
+.tm[data-s="0"] .tm-m i.on{background:var(--tm3)}
+.tm[data-s="1"] .tm-m i.on{background:var(--tm4)}
+.tm[data-s="2"] .tm-m i.on{background:var(--tm5);box-shadow:0 0 10px -2px var(--tm5)}
 .tm-all{background:linear-gradient(180deg, color-mix(in srgb, var(--surface) 55%, var(--sunken)), var(--sunken));border-color:var(--rule-strong)}
 .tm-all .tm-v{font:700 21px/1.15 var(--f-display);letter-spacing:-.02em;margin-top:2px}
 .tm-how{font-size:13px;color:var(--ink-3)}
