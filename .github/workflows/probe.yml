@@ -11,3 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: python3 tools/probe.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: samples
+          path: samples
+          retention-days: 1
