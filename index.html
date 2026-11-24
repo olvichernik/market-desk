@@ -347,8 +347,8 @@ body.noscroll{overflow:hidden}
   .fed-grid.has-odds .fo-chart{flex:1;min-height:340px;height:auto}
 }
 /* three series, fixed order: hike, hold, cut (validated for both themes) */
-:root{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a}
-@media (prefers-color-scheme: dark){:root{--s1:#3987e5;--s2:#d95926;--s3:#199e70}}
+:root{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4}
+@media (prefers-color-scheme: dark){:root{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181}}
 .fo-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
 .fo-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:baseline}
 .fo-chart{height:300px;min-width:0}
@@ -746,6 +746,28 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 :root{--rim:linear-gradient(135deg, rgba(42,120,214,.7) 0, rgba(112,92,220,.34) 36%, rgba(226,92,116,.34) 64%, rgba(247,147,26,.9) 100%)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--rim:linear-gradient(135deg, rgba(100,168,255,.95) 0, rgba(150,122,255,.5) 36%, rgba(255,118,140,.5) 64%, rgba(255,164,54,.95) 100%)}}
 :root[data-theme="dark"]{--rim:linear-gradient(135deg, rgba(100,168,255,.95) 0, rgba(150,122,255,.5) 36%, rgba(255,118,140,.5) 64%, rgba(255,164,54,.95) 100%)}
+
+/* ================= global liquidity against the price ================= */
+#lqBox{margin-top:12px}
+.lq-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:900px){.lq-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.lq-ctl{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.lq-keys{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 100%}
+/* a key is the legend and the switch at once: the dot carries the line's colour, the fill says whether it is drawn */
+.lq-key{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--rule);background:transparent;border-radius:999px;padding:5px 13px 5px 10px;
+  font:600 13.5px/1.2 var(--f-body);color:var(--ink-3);min-height:34px}
+button.lq-key{cursor:pointer;transition:background-color .15s,border-color .15s,color .15s}
+button.lq-key:hover{border-color:var(--rule-strong);color:var(--ink-2)}
+button.lq-key[aria-pressed="true"]{background:var(--sunken);border-color:var(--rule-strong);color:var(--ink)}
+button.lq-key[aria-pressed="false"] .lq-dot{opacity:.4}
+span.lq-key{color:var(--ink);border-style:dashed}
+.lq-dot{width:10px;height:10px;border-radius:50%;flex:none}
+.lq-btc .lq-dot{background:var(--ink)}
+.lq-chart{height:360px;min-width:0}
+@media (min-width:900px){.lq-chart{height:460px}}
+@media (min-width:1100px){#lqNote{max-width:none;column-count:2;column-gap:36px}}
+@media (max-width:559px){.lq-tiles{gap:6px} .lq-tiles .tile{padding:10px 8px} .lq-tiles .tile-v{font-size:19px} .lq-key{padding:5px 10px 5px 8px;font-size:13px}}
+@media (prefers-reduced-motion: reduce){button.lq-key{transition:none}}
 </style>
 </head>
 <body>
@@ -987,7 +1009,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   <section class="sec" id="mood" hidden>
     <div class="sec-head">
       <h2>Настроение и ликвидность</h2>
-      <p class="sec-note">Страх и жадность, плата за плечо, деньги в стейблкоинах</p>
+      <p class="sec-note">Страх и жадность, плата за плечо, стейблкоины, денежная масса и балансы центробанков</p>
     </div>
     <div class="mood-grid">
       <div class="panel stack" id="fgBox" hidden>
@@ -1023,6 +1045,36 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
         <div class="lw-xs" id="stChart"></div>
         <p class="hint" id="stNote"></p>
       </div>
+    </div>
+    <div class="panel stack" id="lqBox" hidden>
+      <div class="sec-head"><h3>Глобальная ликвидность и биткойн</h3><p class="sec-note" id="lqS"></p></div>
+      <div class="tiles lq-tiles">
+        <div class="tile"><div class="lab">M2 четырёх экономик</div><div class="tile-v" id="lqM2">—</div><div class="tile-s" id="lqM2S"></div></div>
+        <div class="tile"><div class="lab">M2 США</div><div class="tile-v" id="lqUs">—</div><div class="tile-s" id="lqUsS"></div></div>
+        <div class="tile"><div class="lab">Балансы ФРС, ЕЦБ и Банка Японии</div><div class="tile-v" id="lqCb">—</div><div class="tile-s" id="lqCbS"></div></div>
+        <div class="tile"><div class="lab">Чистая ликвидность ФРС</div><div class="tile-v" id="lqNet">—</div><div class="tile-s" id="lqNetS"></div></div>
+      </div>
+      <div class="lq-ctl">
+        <div class="lq-keys" id="lqSeries" role="group" aria-label="Что наложить на цену биткойна"></div>
+        <div class="seg" id="lqMode" role="group" aria-label="Что показывают линии ликвидности">
+          <button type="button" data-m="level" aria-pressed="true">Уровень</button>
+          <button type="button" data-m="yoy" aria-pressed="false">Рост за год</button>
+        </div>
+        <div class="seg" id="lqShift" role="group" aria-label="Сдвиг ликвидности вперёд">
+          <button type="button" data-w="0" aria-pressed="true">Без сдвига</button>
+          <button type="button" data-w="10" aria-pressed="false">+10 недель</button>
+          <button type="button" data-w="12" aria-pressed="false">+12</button>
+          <button type="button" data-w="16" aria-pressed="false">+16</button>
+        </div>
+        <div class="seg" id="lqRange" role="group" aria-label="Период графика">
+          <button type="button" data-r="all" aria-pressed="false">С 2013</button>
+          <button type="button" data-r="5y" aria-pressed="true">5 лет</button>
+          <button type="button" data-r="2y" aria-pressed="false">2 года</button>
+        </div>
+      </div>
+      <p class="fo-read" id="lqRead" aria-live="polite"></p>
+      <div class="lq-chart" id="lqChart"></div>
+      <p class="hint" id="lqNote"></p>
     </div>
   </section>
 
@@ -2888,7 +2940,8 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden){ tic
 })();
 </script>
 <script>
-/* Insight layer: where the market stands in its cycle, the odds of reaching each level, mood and liquidity, tokens with revenue.
+/* Insight layer: where the market stands in its cycle, the odds of reaching each level, mood and liquidity (crypto's own and the
+   world's money), tokens with revenue.
    Every block reads a public source by itself and hides when that source stops answering. */
 (() => {
 "use strict";
@@ -3288,7 +3341,193 @@ function renderStables(){
   stSeries.setData(r.slice(-366).map((x) => ({time: x.d, value: x.v})));
   stChart.timeScale().fitContent();
 }
-function moodShown(){ $("mood").hidden = $("fgBox").hidden && $("fuBox").hidden && $("stBox").hidden; }
+function moodShown(){ $("mood").hidden = $("fgBox").hidden && $("fuBox").hidden && $("stBox").hidden && $("lqBox").hidden; }
+
+/* ================= global liquidity against the price =================
+   One weekly grid from the job (macro.json): M2 of the four largest economies, US M2, three central banks, the Fed's net
+   liquidity, stablecoins. The reader lays any of them over the price, as levels or as growth over a year, and may move
+   them forward by a few weeks. A series keeps its colour whatever else is switched on. */
+const LQ = [
+  {k: "m2g", n: "M2 мира", c: "--s1"},
+  {k: "m2us", n: "M2 США", c: "--s2"},
+  {k: "cb", n: "Центробанки", c: "--s3"},
+  {k: "netfed", n: "Чистая ликвидность ФРС", c: "--s4"},
+  {k: "stables", n: "Стейблкоины", c: "--s5"},
+];
+const LQ_SHIFTS = [0, 10, 12, 16];
+let M = null, lqChart = null, lqBtc = null, lqLines = [], lqLeft = null;
+const lq = {keys: ["m2g"], mode: "level", shift: 0, range: "5y"};
+try {
+  const j = JSON.parse(lsGet("desk.lq") || "{}");
+  if (Array.isArray(j.keys)) lq.keys = LQ.map((x) => x.k).filter((k) => j.keys.includes(k));
+  if (j.mode === "yoy") lq.mode = "yoy";
+  if (LQ_SHIFTS.includes(j.shift)) lq.shift = j.shift;
+  if (["all", "5y", "2y"].includes(j.range)) lq.range = j.range;
+} catch (e){}
+const saveLq = () => lsSet("desk.lq", JSON.stringify(lq));
+const narrow = () => window.matchMedia && window.matchMedia("(max-width:559px)").matches;
+/* billions of dollars as the reader says them */
+const trn = (v) => v == null ? "—" : v < 1000 ? "$" + nf0.format(v) + " млрд" : "$" + (v >= 10000 ? nf1 : nf2).format(v / 1000) + " трлн";
+const grow = (v) => v == null ? "" : pct(v);
+
+async function loadMacro(){
+  let got = null;
+  for (const u of [dataUrl("macro.json"), "macro.json"]){
+    if (!u) continue;
+    try {
+      const d = await getJson(u, 8000), n = +d.n;
+      if (!isD(d.t0) || !(n > 100 && n < 5000) || !d.series || typeof d.series !== "object") throw new Error("shape");
+      const series = {};
+      for (const x of LQ){
+        const r = d.series[x.k];
+        if (!r || !Array.isArray(r.v) || r.v.length !== n || !isD(r.asOf)) continue;
+        const v = r.v.map((y) => num(y) != null && y > 0 ? y : null);
+        if (v.filter((y) => y != null).length < 60) continue;
+        const parts = {};
+        if (r.parts && typeof r.parts === "object") for (const [k, a] of Object.entries(r.parts)) if (Array.isArray(a) && num(a[0]) > 0 && isD(a[1])) parts[k] = {v: a[0], d: a[1]};
+        series[x.k] = {v, asOf: r.asOf, parts};
+      }
+      const f = {t: Array.from({length: n}, (_, i) => addDays(d.t0, i * 7)), series, updated: Date.parse(d.updated) || 0};
+      if (Object.keys(series).length && (!got || f.updated > got.updated)) got = f;
+      if (got && Date.now() - got.updated < 12 * 3600e3) break;
+    } catch (e){}
+  }
+  if (got) M = got;
+  renderMacro();
+}
+/* the latest published value of a series and the ones some weeks before it */
+function lqLast(k){
+  const r = M.series[k]; if (!r) return null;
+  let i = r.v.length - 1; while (i >= 0 && r.v[i] == null) i--;
+  if (i < 0) return null;
+  const ago = (n) => i - n >= 0 ? r.v[i - n] : null;
+  return {v: r.v[i], d: M.t[i], ago, ch: (n) => { const a = ago(n); return a ? (r.v[i] / a - 1) * 100 : null; }};
+}
+function renderMacro(){
+  const ok = M && Date.now() - M.updated < 20 * DAY;
+  $("lqBox").hidden = !ok; moodShown();
+  if (!ok) return;
+  const tile = (id, k, sub) => { const x = lqLast(k); set(id, x ? trn(x.v) : "—"); set(id + "S", x ? sub(x).filter(Boolean).join("; ") : "источник не ответил"); };
+  const yr = (x) => x.ch(52) == null ? "" : grow(x.ch(52)) + " за год";
+  const q = (x) => x.ch(13) == null ? "" : grow(x.ch(13)) + " за 13 недель";
+  tile("lqM2", "m2g", (x) => [yr(x), q(x)]);
+  tile("lqUs", "m2us", (x) => [yr(x), "данные на " + shortDay(utcMs(x.d))]);
+  tile("lqCb", "cb", (x) => [yr(x), q(x)]);
+  tile("lqNet", "netfed", (x) => { const a = x.ago(4), d = a ? x.v - a : null; return [d == null ? "" : (d > 0 ? "+" : "") + cap(d * 1e9) + " за 4 недели", yr(x)]; });
+  set("lqS", "FRED, ЕЦБ, Банк Японии, Народный банк Китая; обновлено " + stamp(M.updated));
+
+  const g = M.series.m2g, mon = (iso) => new Date(utcMs(iso)).toLocaleDateString("ru-RU", {timeZone: "UTC", day: "numeric", month: "long"});
+  const P = g && g.parts, age = P && P.us && P.ez && P.cn && P.jp ? " Сейчас в расчёте: США на " + mon(P.us.d) + " (" + trn(P.us.v) + "), еврозона на " + mon(P.ez.d) + " (" + trn(P.ez.v) + "), Китай на " + mon(P.cn.d)
+    + " (" + trn(P.cn.v) + "), Япония на " + mon(P.jp.d) + " (" + trn(P.jp.v) + ")." : "";
+  set("lqNote", "M2 мира: денежная масса США, еврозоны, Китая и Японии в долларах по курсу каждой недели. M2 выходит раз в месяц с опозданием, поэтому последние недели посчитаны по последним цифрам и свежему курсу: конец линии двигает в основном доллар." + age
+    + " Центробанки: балансы ФРС, ЕЦБ и Банка Японии. Чистая ликвидность ФРС: баланс минус счёт Казначейства и обратное репо."
+    + " В режиме «Уровень» у каждой линии своя шкала: совпадение линий показывает направление, а не размер. В режиме «Рост за год» шкала общая, в процентах (у стейблкоинов своя)."
+    + " Сдвиг переносит ликвидность вперёд на случай, если цена отвечает на неё с опозданием; это наблюдение по прошлым годам, а не прогноз.");
+  lqControls(); drawLiq();
+}
+function lqControls(){
+  const host = $("lqSeries");
+  if (!host.childElementCount){
+    host.append(h("span", {class: "lq-key lq-btc"}, h("i", {class: "lq-dot"}), "Биткойн"));
+    for (const x of LQ) host.append(h("button", {type: "button", class: "lq-key", "data-k": x.k, onclick: () => {
+      lq.keys = LQ.map((y) => y.k).filter((k) => k === x.k ? !lq.keys.includes(k) : lq.keys.includes(k)); saveLq(); lqControls(); drawLiq();
+    }}, h("i", {class: "lq-dot", style: "background:var(" + x.c + ")"}), x.n));
+    for (const b of document.querySelectorAll("#lqMode button")) b.addEventListener("click", () => { lq.mode = b.dataset.m; saveLq(); lqControls(); drawLiq(); });
+    for (const b of document.querySelectorAll("#lqShift button")) b.addEventListener("click", () => { lq.shift = +b.dataset.w; saveLq(); lqControls(); drawLiq(); });
+    for (const b of document.querySelectorAll("#lqRange button")) b.addEventListener("click", () => { lq.range = b.dataset.r; saveLq(); lqControls(); setLqRange(); });
+  }
+  for (const b of host.querySelectorAll("button")){ b.hidden = !(M && M.series[b.dataset.k]); b.setAttribute("aria-pressed", String(lq.keys.includes(b.dataset.k))); }
+  for (const b of document.querySelectorAll("#lqMode button")) b.setAttribute("aria-pressed", String(b.dataset.m === lq.mode));
+  for (const b of document.querySelectorAll("#lqShift button")) b.setAttribute("aria-pressed", String(+b.dataset.w === lq.shift));
+  for (const b of document.querySelectorAll("#lqRange button")) b.setAttribute("aria-pressed", String(b.dataset.r === lq.range));
+}
+/* the price on the same Wednesdays: the weekly history file (its points fall on another weekday, so the value is read between
+   two of them), exchange candles after the file ends, the live price today */
+function lqPrice(){
+  const k = knots(), today = isoOf(Date.now()), out = [], W = 7 * DAY, t0 = H ? utcMs(H.end) - (H.n - 1) * W : 0;
+  for (const d of M.t){
+    if (d >= today) break;
+    const ms = utcMs(d); let p = null;
+    if (H){
+      const x = (ms - t0) / W, i = Math.floor(x), f = x - i;
+      if (i >= 0 && i < H.n - 1) p = Math.exp(Math.log(H.price[i]) * (1 - f) + Math.log(H.price[i + 1]) * f);
+      else if (i === H.n - 1 && f < 1e-9) p = H.price[i];
+    }
+    if (p == null) p = priceAt(k, ms + DAY);
+    if (p != null) out.push({time: d, value: p});
+  }
+  const P = price(); if (P) out.push({time: today, value: P});
+  return out;
+}
+function lqPoints(k){
+  const r = M.series[k], out = [], sh = lq.shift * 7;
+  for (let i = 0; i < r.v.length; i++){
+    let y = r.v[i]; if (y == null) continue;
+    if (lq.mode === "yoy"){ const a = i >= 52 ? r.v[i - 52] : null; if (a == null) continue; y = (y / a - 1) * 100; }
+    out.push({time: sh ? addDays(M.t[i], sh) : M.t[i], value: y});
+  }
+  return out;
+}
+function lqRead(p){
+  const yoy = lq.mode === "yoy", val = (v) => yoy ? pct(v) : trn(v);
+  if (p && p.time != null && p.seriesData){
+    const t = timeKey(p.time), parts = [], b = lqBtc ? p.seriesData.get(lqBtc) : null;
+    if (b && b.value != null) parts.push("биткойн " + money(b.value));
+    for (const l of lqLines){ const d = p.seriesData.get(l.api); if (d && d.value != null) parts.push(l.n + " " + val(d.value)); }
+    if (parts.length){ set("lqRead", fullDate(t) + ": " + parts.join("; ") + (lq.shift && lqLines.length ? " (ликвидность на " + dmy(addDays(t, -lq.shift * 7)) + ")" : "")); return; }
+  }
+  const bits = [];
+  if (lqLeft && !narrow()) bits.push("Слева: " + lqLeft.n + (yoy ? ", рост за год" : lqLeft.k === "stables" ? ", млрд долларов" : ", трлн долларов"));
+  bits.push((bits.length ? "справа" : "Справа") + ": биткойн, логарифмическая шкала");
+  if (lq.shift && lqLines.length) bits.push("ликвидность сдвинута на " + lq.shift + " недель вперёд");
+  if (yoy && lqLines.length) bits.push("рост к той же неделе год назад");
+  set("lqRead", bits.join("; "));
+}
+function setLqRange(){
+  if (!lqChart || !lqBtc) return;
+  const ts = lqChart.timeScale(), today = isoOf(Date.now());
+  if (lq.range === "all"){ ts.fitContent(); return; }
+  let end = today; for (const l of lqLines) if (l.end > end) end = l.end;
+  try { ts.setVisibleRange({from: addDays(today, -(lq.range === "5y" ? 5 : 2) * 365), to: end}); } catch (e){ ts.fitContent(); }
+}
+function drawLiq(){
+  if (!LW || !M || $("lqBox").hidden) return;
+  const yoy = lq.mode === "yoy", small = narrow();
+  if (!lqChart){
+    lqChart = LW.createChart($("lqChart"), Object.assign(chartOpts(), {handleScale: {mouseWheel: false, pinch: true, axisPressedMouseMove: true}}));
+    lqChart.applyOptions({timeScale: {timeVisible: false, rightOffset: 3, minBarSpacing: 0.05, borderColor: css("--rule-strong")}});
+    lqChart.subscribeCrosshairMove(lqRead);
+    charts.push([lqChart, drawLiq]);
+    if ("ResizeObserver" in window){ let w0 = 0; new ResizeObserver((es) => { const w = es[0].contentRect.width; if (w > 0 && !w0) setLqRange(); w0 = w; }).observe($("lqChart")); }   // unfolded after being drawn while hidden
+  }
+  for (const l of lqLines) lqChart.removeSeries(l.api);
+  if (lqBtc) lqChart.removeSeries(lqBtc);
+  lqLines = []; lqLeft = null;
+  const on = LQ.filter((x) => lq.keys.includes(x.k) && M.series[x.k]);
+  /* growth rates are comparable, so they share the left scale; stablecoins grew by hundreds of percent and would flatten the rest */
+  const shared = (x) => yoy && (x.k !== "stables" || on.length === 1);
+  for (const x of on){
+    const left = shared(x) || (!lqLeft && !(yoy && x.k === "stables"));
+    const api = lqChart.addLineSeries({color: css(x.c), lineWidth: 2, priceScaleId: left ? "left" : "lq-" + x.k, priceLineVisible: false, lastValueVisible: left && !small, crosshairMarkerRadius: 3,
+      priceFormat: {type: "custom", minMove: 0.1, formatter: yoy ? (v) => pct(v) : x.k === "stables" ? (v) => nf0.format(v) : (v) => nf1.format(v / 1000)}});
+    if (!left) api.priceScale().applyOptions({scaleMargins: {top: 0.08, bottom: 0.08}});
+    const pts = lqPoints(x.k); api.setData(pts);
+    if (left && !lqLeft){ lqLeft = x; if (yoy) api.createPriceLine({price: 0, color: css("--rule-strong"), lineWidth: 1, lineStyle: 2, axisLabelVisible: false}); }
+    lqLines.push({api, k: x.k, n: x.n, end: pts.length ? pts[pts.length - 1].time : ""});
+  }
+  lqBtc = lqChart.addLineSeries({color: css("--ink"), lineWidth: 2, priceScaleId: "right", priceLineVisible: false, lastValueVisible: true, crosshairMarkerRadius: 3,
+    priceFormat: {type: "custom", minMove: 1, formatter: (v) => v >= 1000 ? nf0.format(v) : nf1.format(v)}});
+  lqBtc.setData(lqPrice());
+  lqChart.applyOptions({leftPriceScale: {visible: !!lqLeft && !small, borderColor: css("--rule-strong")}});
+  lqChart.priceScale("right").applyOptions({mode: 1, scaleMargins: {top: 0.08, bottom: 0.08}});
+  if (lqLeft) lqChart.priceScale("left").applyOptions({scaleMargins: {top: 0.08, bottom: 0.08}});
+  setLqRange(); lqRead(null);
+}
+function tailLiq(){   // the last point of the price follows the live one
+  if (!lqBtc || !M) return;
+  const P = price(); if (!P) return;
+  try { lqBtc.update({time: isoOf(Date.now()), value: P}); } catch (e){ drawLiq(); }
+}
 
 /* ================= tokens: revenue against market value ================= */
 let tok = null;
@@ -3336,17 +3575,19 @@ function renderTokens(){
 
 /* ================= wiring ================= */
 S.onLevels = () => { renderCycle(); tailCycle(); };
-S.onCandles = () => { drawCycle(); renderCycle(); };
+S.onCandles = () => { drawCycle(); renderCycle(); drawLiq(); };
 if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { for (const [c, recolour] of charts){ c.applyOptions(chartOpts()); recolour(); } });
-loadHistory(); loadDvol(); loadFng(); loadFunding(); loadLiq(); loadTokens();
-setInterval(() => { if (document.hidden) return; renderCycle(); tailCycle(); renderTokens(); }, 15000);
+loadHistory().then(drawLiq); loadDvol(); loadFng(); loadFunding(); loadLiq(); loadTokens(); loadMacro();
+setInterval(() => { if (document.hidden) return; renderCycle(); tailCycle(); renderTokens(); tailLiq(); }, 15000);
 setInterval(loadDvol, 10 * 60e3);
 setInterval(loadFunding, 10 * 60e3);
 setInterval(loadFng, 3600e3);
 setInterval(() => { loadLiq(); loadTokens(); }, 30 * 60e3);
+setInterval(loadMacro, 3 * 3600e3);
 document.addEventListener("visibilitychange", () => { if (!document.hidden){ loadDvol(); loadFunding(); } });
 D.insight = () => ({hist: H ? {n: H.n, end: H.end, pts: cyPts.length, last: cyPts[cyPts.length - 1] || null, range: cyRange} : null, dvol, fg: fg ? fg.rows.length : 0, fu: fu ? fu.pts.length : 0, fuDays: fuDays.length,
-  st: st ? st.rows.length : 0, tok: tok ? tok.tokens.length : 0, touch: typeof S.touch === "function"});
+  st: st ? st.rows.length : 0, tok: tok ? tok.tokens.length : 0, touch: typeof S.touch === "function",
+  macro: M ? {weeks: M.t.length, series: Object.keys(M.series), updated: M.updated, state: Object.assign({}, lq), lines: lqLines.map((l) => l.k), left: lqLeft ? lqLeft.k : null, read: $("lqRead").textContent} : null});
 })();
 </script>
 <script>

@@ -198,7 +198,7 @@ rep(`  <section class="sec" id="ladder" hidden>`, `  <section class="sec" id="ma
   <section class="sec" id="mood" hidden>
     <div class="sec-head">
       <h2>Настроение и ликвидность</h2>
-      <p class="sec-note">Страх и жадность, плата за плечо, деньги в стейблкоинах</p>
+      <p class="sec-note">Страх и жадность, плата за плечо, стейблкоины, денежная масса и балансы центробанков</p>
     </div>
     <div class="mood-grid">
       <div class="panel stack" id="fgBox" hidden>
@@ -234,6 +234,36 @@ rep(`  <section class="sec" id="ladder" hidden>`, `  <section class="sec" id="ma
         <div class="lw-xs" id="stChart"></div>
         <p class="hint" id="stNote"></p>
       </div>
+    </div>
+    <div class="panel stack" id="lqBox" hidden>
+      <div class="sec-head"><h3>Глобальная ликвидность и биткойн</h3><p class="sec-note" id="lqS"></p></div>
+      <div class="tiles lq-tiles">
+        <div class="tile"><div class="lab">M2 четырёх экономик</div><div class="tile-v" id="lqM2">—</div><div class="tile-s" id="lqM2S"></div></div>
+        <div class="tile"><div class="lab">M2 США</div><div class="tile-v" id="lqUs">—</div><div class="tile-s" id="lqUsS"></div></div>
+        <div class="tile"><div class="lab">Балансы ФРС, ЕЦБ и Банка Японии</div><div class="tile-v" id="lqCb">—</div><div class="tile-s" id="lqCbS"></div></div>
+        <div class="tile"><div class="lab">Чистая ликвидность ФРС</div><div class="tile-v" id="lqNet">—</div><div class="tile-s" id="lqNetS"></div></div>
+      </div>
+      <div class="lq-ctl">
+        <div class="lq-keys" id="lqSeries" role="group" aria-label="Что наложить на цену биткойна"></div>
+        <div class="seg" id="lqMode" role="group" aria-label="Что показывают линии ликвидности">
+          <button type="button" data-m="level" aria-pressed="true">Уровень</button>
+          <button type="button" data-m="yoy" aria-pressed="false">Рост за год</button>
+        </div>
+        <div class="seg" id="lqShift" role="group" aria-label="Сдвиг ликвидности вперёд">
+          <button type="button" data-w="0" aria-pressed="true">Без сдвига</button>
+          <button type="button" data-w="10" aria-pressed="false">+10 недель</button>
+          <button type="button" data-w="12" aria-pressed="false">+12</button>
+          <button type="button" data-w="16" aria-pressed="false">+16</button>
+        </div>
+        <div class="seg" id="lqRange" role="group" aria-label="Период графика">
+          <button type="button" data-r="all" aria-pressed="false">С 2013</button>
+          <button type="button" data-r="5y" aria-pressed="true">5 лет</button>
+          <button type="button" data-r="2y" aria-pressed="false">2 года</button>
+        </div>
+      </div>
+      <p class="fo-read" id="lqRead" aria-live="polite"></p>
+      <div class="lq-chart" id="lqChart"></div>
+      <p class="hint" id="lqNote"></p>
     </div>
   </section>
 

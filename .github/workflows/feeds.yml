@@ -2,8 +2,10 @@ name: Обновление данных
 
 # Keeps the data the site cannot fetch from a browser fresh, without anyone's computer:
 # fed.json (odds for each Fed meeting from Kalshi, the target range from FRED),
-# levels.json (bitcoin's realized price from BGeometrics), liq.json (stablecoin supply from DefiLlama) and
-# tokens.json (protocol revenue from DefiLlama, supply and market value from CoinGecko).
+# levels.json (bitcoin's realized price from BGeometrics), liq.json (stablecoin supply from DefiLlama),
+# tokens.json (protocol revenue from DefiLlama, supply and market value from CoinGecko) and
+# macro.json (M2 of the largest economies, central bank balance sheets, the Fed's net liquidity: FRED, the ECB,
+# the Bank of Japan, Eastmoney for China).
 # The hourly result goes to the "data" branch, which the site reads; a copy is committed to main about once a day.
 on:
   schedule:
@@ -39,7 +41,7 @@ jobs:
         run: |
           echo "MAIN_STAMP=$(python3 -c "import json; print(json.load(open('fed.json')).get('updated') or '')" 2>/dev/null || true)" >> "$GITHUB_ENV"
           if git fetch --quiet --depth=1 origin data 2>/dev/null; then
-            for f in fed.json levels.json liq.json tokens.json; do
+            for f in fed.json levels.json liq.json tokens.json macro.json; do
               git show "FETCH_HEAD:$f" > "$RUNNER_TEMP/$f" 2>/dev/null && cp "$RUNNER_TEMP/$f" "$f" || true
             done
           fi
@@ -52,10 +54,10 @@ jobs:
           python3 -c "import json; json.load(open('fed.json'))"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for f in levels.json liq.json tokens.json; do
+          for f in levels.json liq.json tokens.json macro.json; do
             if [ -s "$f" ]; then python3 -c "import json, sys; json.load(open(sys.argv[1]))" "$f"; fi
           done
-          tree=$(for f in fed.json levels.json liq.json tokens.json; do if [ -s "$f" ]; then printf '100644 blob %s\t%s\n' "$(git hash-object -w "$f")" "$f"; fi; done | git mktree)
+          tree=$(for f in fed.json levels.json liq.json tokens.json macro.json; do if [ -s "$f" ]; then printf '100644 blob %s\t%s\n' "$(git hash-object -w "$f")" "$f"; fi; done | git mktree)
           commit=$(git commit-tree "$tree" -m "Данные: $(date -u +%FT%H:%MZ)")
           git push --quiet --force origin "$commit:refs/heads/data"
       - name: Раз в сутки сохранить копию в main
@@ -73,7 +75,7 @@ jobs:
             echo "Копия в main свежая"
             exit 0
           fi
-          for f in levels.json liq.json tokens.json; do
+          for f in levels.json liq.json tokens.json macro.json; do
             if [ -s "$f" ]; then git add "$f"; fi
           done
           git add fed.json

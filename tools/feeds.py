@@ -17,9 +17,18 @@ liq.json: the total of dollar stablecoins, daily, for the last 400 days (DefiLla
 tokens.json: for a few tokens, protocol revenue and what goes to holders over 30 days (DefiLlama) with supply,
   market value and the all-time high (CoinGecko); the page multiplies the supply by a live price itself
 
+macro.json: liquidity outside crypto, one value a week (Wednesdays) since 2013, in billions of dollars
+  - M2 of the four largest economies: the United States (FRED, weekly), the euro area (ECB), China (the People's Bank's
+    monthly figures as republished by Eastmoney) and Japan (Bank of Japan), each at the exchange rate of that week
+    (ECB reference rates); the latest weeks use the last published M2 with a fresh exchange rate
+  - the balance sheets of the Fed, the ECB and the Bank of Japan together (FRED)
+  - the Fed's net liquidity: its assets minus the Treasury's account and the reverse repo facility (FRED)
+  - US M2 on its own and all dollar stablecoins (DefiLlama), for the same chart
+
 Each source is optional: if one is unreachable or looks wrong, the previous values for that part are
 kept, and the site hides numbers that have not been refreshed for several days.
 """
+import bisect
 import csv
 import datetime as dt
 import io
@@ -31,7 +40,13 @@ import urllib.request
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2/events?series_ticker=KXFEDDECISION&status=open&with_nested_markets=true&limit=50"
 FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFEDTARL,DFEDTARU&cosd="
-OUT, CAL, LEVELS, LIQ, TOKENS = "fed.json", "fed-calendar.json", "levels.json", "liq.json", "tokens.json"
+OUT, CAL, LEVELS, LIQ, TOKENS, MACRO = "fed.json", "fed-calendar.json", "levels.json", "liq.json", "tokens.json", "macro.json"
+FRED_ONE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=%s&cosd=2012-01-01"       # one series a request: mixed frequencies come back as a zip
+ECB_M2 = "https://data-api.ecb.europa.eu/service/data/BSI/M.U2.Y.V.M20.X.1.U2.2300.Z01.E?format=csvdata&startPeriod=2012-01&detail=dataonly"
+ECB_FX = "https://data-api.ecb.europa.eu/service/data/EXR/D.USD+JPY+CNY.EUR.SP00.A?format=csvdata&startPeriod=2012-01-01&detail=dataonly"
+CN_M2 = "https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_ECONOMY_CURRENCY_SUPPLY&columns=ALL&pageNumber=1&pageSize=500&sortTypes=-1&sortColumns=REPORT_DATE&source=WEB&client=WEB"
+BOJ_M2 = "https://www.stat-search.boj.or.jp/api/v1/getDataCode?format=json&lang=en&db=MD02&code=MAM1NAM2M2MO&startDate=201201"
+GRID0 = dt.date(2013, 1, 2)                       # a Wednesday: the Fed dates its balance sheet by Wednesdays
 BG_REALIZED = "https://bitcoin-data.com/v1/realized-price/last"
 STABLES = "https://stablecoins.llama.fi/stablecoincharts/all"
 LLAMA_FEES = "https://api.llama.fi/summary/fees/%s?dataType=%s"
@@ -62,6 +77,13 @@ def fetch(name, url):
     if SAMPLES:
         return json.load(open(os.path.join(SAMPLES, name + ".json"), encoding="utf-8"))
     return json.loads(get(url, 25))
+
+
+def raw(name, url):
+    """Text from the network, or from a saved file when testing locally."""
+    if SAMPLES:
+        return open(os.path.join(SAMPLES, name), encoding="utf-8").read()
+    return get(url, 45)
 
 
 def stamp(now):
@@ -208,6 +230,21 @@ def levels(now, sample=None):
     print("levels.json: realized %s (%s), %d days of history" % (round(v, 2), day, len(rows)))
 
 
+_stable = []
+
+
+def stable_rows():
+    """Every day DefiLlama has, as [date, dollars]; read once a run."""
+    if not _stable:
+        rows = []
+        for r in fetch("stables", STABLES):
+            t, v = num(r.get("date")), num((r.get("totalCirculatingUSD") or {}).get("peggedUSD"))
+            if t and v and v > 0:
+                rows.append([dt.datetime.fromtimestamp(t, dt.timezone.utc).date().isoformat(), int(round(v, -6))])
+        _stable.extend(sorted({r[0]: r for r in rows}.values()))
+    return _stable
+
+
 def stables(now):
     """Dollar stablecoins in circulation, one total a day."""
     ok, old = fresh(LIQ, now, 6)
@@ -215,12 +252,7 @@ def stables(now):
         print("liq.json is fresh")
         return
     try:
-        rows = []
-        for r in fetch("stables", STABLES):
-            t, v = num(r.get("date")), num((r.get("totalCirculatingUSD") or {}).get("peggedUSD"))
-            if t and v and v > 0:
-                rows.append([dt.datetime.fromtimestamp(t, dt.timezone.utc).date().isoformat(), int(round(v, -6))])
-        rows = sorted({r[0]: r for r in rows}.values())[-400:]
+        rows = stable_rows()[-400:]
         last = dt.date.fromisoformat(rows[-1][0])
         if len(rows) < 300 or not 5e10 < rows[-1][1] < 5e12 or (now.date() - last).days > 5:
             raise ValueError("odd series: %d rows, last %r" % (len(rows), rows[-1]))
@@ -289,13 +321,182 @@ def tokens(now):
     print("tokens.json: %d tokens, market data for %d, revenue for %d" % (len(out), got_market, got_fees))
 
 
+def month_end(period):
+    """The last day of a month given as 2026-10, 202610 or 2026-10-01."""
+    p = str(period).replace("-", "")
+    y, m = int(p[:4]), int(p[4:6])
+    return (dt.date(y + (m == 12), m % 12 + 1, 1) - dt.timedelta(days=1)).isoformat()
+
+
+class Step:
+    """A series that holds its last published value until the next one."""
+    def __init__(self, rows):
+        rows = sorted((d, v) for d, v in rows if v is not None and v > 0)
+        if len(rows) < 60:
+            raise ValueError("only %d rows" % len(rows))
+        self.d, self.v = [r[0] for r in rows], [r[1] for r in rows]
+
+    def at(self, day, max_age):
+        i = bisect.bisect_right(self.d, day) - 1
+        if i < 0 or (dt.date.fromisoformat(day) - dt.date.fromisoformat(self.d[i])).days > max_age:
+            return None
+        return self.v[i]
+
+    def when(self, day):
+        i = bisect.bisect_right(self.d, day) - 1
+        return self.d[i] if i >= 0 else None
+
+
+def fred_one(sid, scale, monthly=False):
+    rows = []
+    for r in csv.DictReader(io.StringIO(raw("fred-%s.csv" % sid, FRED_ONE % sid))):
+        d, v = r.get("observation_date") or r.get("DATE"), num(r.get(sid))
+        if d and v is not None:
+            rows.append((month_end(d) if monthly else d, v * scale))
+    return rows
+
+
+def ecb_csv(name, url):
+    """ECB data as {currency or "": [(period, value)]}."""
+    out = {}
+    for r in csv.DictReader(io.StringIO(raw(name, url))):
+        v = num(r.get("OBS_VALUE"))
+        if v is not None and r.get("TIME_PERIOD"):
+            out.setdefault(r.get("CURRENCY") or "", []).append((r["TIME_PERIOD"], v))
+    return out
+
+
+def cn_m2():
+    rows = json.loads(raw("cn-m2.json", CN_M2))["result"]["data"]          # BASIC_CURRENCY: M2 in hundreds of millions of yuan
+    return [(month_end(str(r.get("REPORT_DATE"))[:7]), num(r.get("BASIC_CURRENCY")) * 1e8) for r in rows if num(r.get("BASIC_CURRENCY"))]
+
+
+def boj_m2():
+    s = json.loads(raw("boj-m2.json", BOJ_M2))["RESULTSET"][0]
+    if "100 million yen" not in str(s.get("UNIT")):
+        raise ValueError("unit %r" % (s.get("UNIT"),))
+    v = s["VALUES"]
+    return [(month_end(d), num(x) * 1e8) for d, x in zip(v["SURVEY_DATES"], v["VALUES"]) if num(x)]
+
+
+# what the site draws: key, plausible range of the latest value in dollars, fewest weeks worth keeping
+MACRO_SERIES = (("m2g", 5e13, 3e14, 400), ("m2us", 1.2e13, 5e13, 400), ("cb", 8e12, 5e13, 400), ("netfed", 1.5e12, 1.2e13, 400), ("stables", 5e10, 5e12, 150))
+
+
+def macro(now):
+    """Liquidity outside crypto on one weekly grid."""
+    ok, old = fresh(MACRO, now, 8)
+    if ok:
+        print("macro.json is fresh")
+        return
+    today = now.date()
+    last = today - dt.timedelta(days=(today.weekday() - 2) % 7)
+    grid = [(GRID0 + dt.timedelta(days=7 * i)).isoformat() for i in range((last - GRID0).days // 7 + 1)]
+    src = {}
+
+    def take(key, rows):
+        try:
+            src[key] = Step(rows())
+        except Exception as e:
+            print("macro: %s unavailable:" % key, repr(e))
+        if not SAMPLES:
+            time.sleep(0.5)
+
+    take("fed", lambda: fred_one("WALCL", 1e6))
+    take("tga", lambda: fred_one("WTREGEN", 1e6))
+    take("rrp", lambda: [(d, v + 1.0) for d, v in fred_one("RRPONTSYD", 1e9)])      # a dollar keeps the days with nothing parked
+    take("m2us", lambda: fred_one("WM2NS", 1e9))
+    take("ecb", lambda: fred_one("ECBASSETSW", 1e6))
+    take("boj", lambda: fred_one("JPNASSETS", 1e8, monthly=True))
+    try:
+        fx = ecb_csv("ecb-fx.csv", ECB_FX)
+        for cur in ("USD", "JPY", "CNY"):
+            src["fx" + cur] = Step(fx.get(cur) or [])
+    except Exception as e:
+        print("macro: exchange rates unavailable:", repr(e))
+    take("m2ez", lambda: [(month_end(d), v * 1e6) for d, v in ecb_csv("ecb-m2.csv", ECB_M2).get("", [])])
+    take("m2cn", cn_m2)
+    take("m2jp", boj_m2)
+    take("stables", lambda: [(r[0], r[1]) for r in stable_rows() if r[1] >= 1e9])
+
+    def at(key, day, age):
+        return src[key].at(day, age) if key in src else None
+
+    def usd(cur, day):                          # dollars for one unit of the currency, from the ECB's euro rates
+        e = at("fxUSD", day, 10)
+        if cur == "EUR" or e is None:
+            return e
+        o = at("fx" + cur, day, 10)
+        return e / o if o else None
+
+    def conv(key, cur, day, age):
+        v, r = at(key, day, age), usd(cur, day)
+        return v * r if v is not None and r is not None else None
+
+    def total(parts):
+        return sum(parts) if all(p is not None for p in parts) else None
+
+    m2_parts = lambda d: (("us", at("m2us", d, 120)), ("ez", conv("m2ez", "EUR", d, 150)), ("cn", conv("m2cn", "CNY", d, 120)), ("jp", conv("m2jp", "JPY", d, 120)))
+    cb_parts = lambda d: (("fed", at("fed", d, 6)), ("ecb", conv("ecb", "EUR", d, 45)), ("boj", conv("boj", "JPY", d, 100)))
+
+    def net(d):
+        f, t, r = at("fed", d, 6), at("tga", d, 6), at("rrp", d, 6)
+        if r is None and "rrp" in src and d < src["rrp"].d[-1]:
+            r = 0                               # a week inside the history with no operations at all, as in 2013
+        return f - t - r if None not in (f, t, r) else None
+
+    build = {"m2g": lambda d: total([v for _, v in m2_parts(d)]), "m2us": lambda d: at("m2us", d, 6),
+             "cb": lambda d: total([v for _, v in cb_parts(d)]), "netfed": net, "stables": lambda d: at("stables", d, 6)}
+    names = {"us": "m2us", "ez": "m2ez", "cn": "m2cn", "jp": "m2jp"}
+    prev = old.get("series") if isinstance(old.get("series"), dict) and isD(old.get("t0")) else {}
+    out, fresh_keys = {}, 0
+    for key, lo, hi, least in MACRO_SERIES:
+        try:
+            vals = [build[key](d) for d in grid]
+            have = [i for i, v in enumerate(vals) if v is not None]
+            if len(have) < least:
+                raise ValueError("%d weeks" % len(have))
+            i = have[-1]
+            before = vals[have[-2]]
+            if not lo < vals[i] < hi or abs(vals[i] / before - 1) > 0.15 or (last - dt.date.fromisoformat(grid[i])).days > 200:
+                raise ValueError("odd latest value %r on %s" % (vals[i], grid[i]))
+            row = {"asOf": grid[i]}
+            if key in ("m2g", "cb"):                     # what the total is made of, and how old each part is
+                row["parts"] = {k: [round(v / 1e9, 1), src[names.get(k, k)].when(grid[i])] for k, v in (m2_parts if key == "m2g" else cb_parts)(grid[i])}
+            row["v"] = [None if v is None else round(v / 1e9, 1) for v in vals]
+            out[key] = row
+            fresh_keys += 1
+        except Exception as e:
+            print("macro: %s not rebuilt:" % key, repr(e))
+            p = prev.get(key)
+            if isinstance(p, dict) and isinstance(p.get("v"), list):      # the previous series, moved onto today's grid
+                t0 = dt.date.fromisoformat(old["t0"])
+                was = {(t0 + dt.timedelta(days=7 * i)).isoformat(): v for i, v in enumerate(p["v"])}
+                out[key] = dict(p, v=[was.get(d) for d in grid])
+    if not fresh_keys:
+        print("macro: nothing refreshed, kept the old file")
+        return
+    one = lambda x: json.dumps(x, ensure_ascii=False, separators=(",", ":"))
+    head = {"updated": stamp(now), "t0": grid[0], "step": 7, "n": len(grid), "unit": "bn USD"}
+    write(MACRO, one(head)[:-1] + ',\n"series":{\n' + ",\n".join('"%s":%s' % (k, one(v)) for k, v in out.items()) + "\n}}\n")
+    print("macro.json: %d weeks to %s; %s" % (len(grid), grid[-1], ", ".join("%s %s bn on %s" % (k, next(x for x in reversed(v["v"]) if x is not None), v["asOf"]) for k, v in out.items())))
+
+
+def isD(v):
+    try:
+        dt.date.fromisoformat(str(v))
+        return True
+    except ValueError:
+        return False
+
+
 def main():
     args = sys.argv[1:]                       # local test: feeds.py kalshi.json fred.csv [realized.json]
     try:
         levels(dt.datetime.now(dt.timezone.utc), args[2] if len(args) > 2 else None)
     except Exception as e:
         print("levels skipped:", repr(e))
-    for part in (stables, tokens):
+    for part in (stables, tokens, macro):
         try:
             part(dt.datetime.now(dt.timezone.utc))
         except Exception as e:
