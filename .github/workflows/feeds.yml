@@ -7,11 +7,12 @@ name: Обновление данных
 # macro.json (M2 of the largest economies, central bank balance sheets, the Fed's net liquidity: FRED, the ECB,
 # the Bank of Japan, Eastmoney for China).
 # The result goes to the "data" branch, which the site reads; a copy is committed to main about once a day.
-# GitHub starts only a fraction of scheduled runs for this repository (one of the first seventeen hourly slots), so the
-# job is offered four slots an hour and refreshes each file only when it has aged: a run with nothing to do ends in seconds.
+# GitHub's own schedule starts this workflow about once a day instead of every hour, so the workflow keeps itself going:
+# every run books the next one (the "next" job at the bottom). The schedule and the pushes below only restart the chain
+# if it ever breaks. Each file is refreshed only when it has aged: a run with nothing to do ends in seconds.
 on:
   schedule:
-    - cron: "7,22,37,52 * * * *"
+    - cron: "7,37 * * * *"
   workflow_dispatch:
     inputs:
       force:
@@ -29,14 +30,13 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: feeds
-  cancel-in-progress: false
-
 jobs:
   feeds:
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    concurrency:
+      group: feeds
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - name: Взять прошлые данные
@@ -93,3 +93,33 @@ jobs:
           git commit --quiet -m "Данные: $(date -u +%F)"
           git pull --quiet --rebase origin main
           git push --quiet origin HEAD:main
+
+  # The next run, about 50 minutes later. The job waits out the timer of the "tick" environment (repository settings:
+  # Environments, tick, wait timer; no machine is held while it waits) and then starts this workflow again.
+  # A newer run cancels the older run's waiting job, so there is always one booking, never two.
+  # If the timer is ever removed, the check below refuses to start runs back to back.
+  next:
+    needs: feeds
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    environment: tick
+    concurrency:
+      group: feeds-next
+      cancel-in-progress: true
+    permissions:
+      actions: write
+    steps:
+      - name: Назначить следующий запуск
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MIN_GAP: "1"
+        run: |
+          started=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" -q .run_started_at)
+          gap=$(( ($(date +%s) - $(date -d "$started" +%s)) / 60 ))
+          if [ "$gap" -lt "$MIN_GAP" ]; then
+            echo "С начала запуска прошло $gap мин: таймер окружения tick не настроен, следующий запуск не назначаю"
+            exit 0
+          fi
+          gh workflow run feeds.yml -R "$GITHUB_REPOSITORY" --ref main
+          echo "Следующий запуск назначен, прошло $gap мин"
