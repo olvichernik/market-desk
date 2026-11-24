@@ -12,6 +12,18 @@ css += fs.readFileSync(dir + '/src/extra.css', 'utf8');
 
 // header: the live line joins the top line, live tiles go under the hero, the old jump row is replaced by the sticky bar
 rep(`  <header class="top">`, `  <header class="top" id="top">`);
+// the summary of signals: seven readings on one scale, right under the price
+rep(`
+  </header>`, `
+    <div class="panel stack temp" id="temp" hidden>
+      <div class="sec-head"><h2 class="tm-t">Сводка сигналов</h2><p class="sec-note">Слева холодный рынок: дёшево, страх, деньги уходят. Справа перегретый: дорого, жадность, деньги прибывают.</p></div>
+      <div class="tm-grid" id="tmGrid"></div>
+      <details class="tm-how"><summary>Как это считается</summary>
+        <ul id="tmHow"></ul>
+        <p class="hint">Сводка описывает состояние рынка и не подсказывает сделку: холодный рынок может остывать и дальше. Сигнал, у которого источник молчит, в итог не входит.</p>
+      </details>
+    </div>
+  </header>`);
 rep(`    <div class="top-line">
       <h1>Рыночный пульт</h1>`, `    <div class="mast" id="mast">
       <div class="mast-art" id="mastArt" aria-hidden="true"></div>

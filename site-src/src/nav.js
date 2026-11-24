@@ -84,8 +84,9 @@ function go(id, smooth, keepUrl){
     if (Math.abs(y2 - window.scrollY) > 6) window.scrollTo(0, y2);
   }, ms);
 }
-for (const a of document.querySelectorAll("#bar a[data-go]")) a.addEventListener("click", (e) => {
-  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;   // a new tab stays a new tab
+document.addEventListener("click", (e) => {   // the bar's links and any other link to a section, such as the cells of the summary
+  const a = e.target && e.target.closest ? e.target.closest("a[data-go]") : null;
+  if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;   // a new tab stays a new tab
   e.preventDefault(); go(a.dataset.go, true);
 });
 window.addEventListener("hashchange", () => { const id = location.hash.slice(1); if (ids.includes(id)) go(id, true, true); });

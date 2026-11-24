@@ -5,7 +5,7 @@
 "use strict";
 const D = window.DESK; if (!D || !D.kit) return;
 const {S, $, h, usd, usdBig, pct, nf0, nf1, nf2, plural} = D;
-const {hl, getJson, css, chartOpts, clock, LW, isoOf, isoDay, dataUrl, quote} = D.kit;
+const {hl, getJson, css, chartOpts, clock, LW, isoOf, isoDay, dataUrl, quote, pc1} = D.kit;
 const DAY = 864e5;
 const isD = (v) => typeof v === "string" && /^\d{4}-\d\d-\d\d$/.test(v);
 const num = (v) => typeof v === "number" && isFinite(v) ? v : null;
@@ -587,6 +587,79 @@ function tailLiq(){   // the last point of the price follows the live one
   try { lqBtc.update({time: isoOf(Date.now()), value: P}); } catch (e){ drawLiq(); }
 }
 
+/* ================= the summary of signals =================
+   Seven readings the page already has, each placed on one scale from a cold market (-2) to an overheated one (+2).
+   The thresholds are spelled out for the reader under the block; a reading whose source is silent is left out, not guessed. */
+const TM_WORD = ["Холодно", "Прохладно", "Нейтрально", "Тепло", "Жарко"];
+const byShare = (p) => p < 10 ? -2 : p < 30 ? -1 : p <= 70 ? 0 : p <= 90 ? 1 : 2;   // the share of history that was lower
+const TM = [
+  {k: "val", n: "Оценка", go: "cycle", w: ["очень дёшево", "дёшево", "в норме", "дорого", "очень дорого"],
+    how: "Оценка: цена к реализованной цене (MVRV) против всей истории с 2011 года. Дешевле 10% всех дней: очень дёшево; дешевле 30%: дёшево; дороже 70%: дорого; дороже 90%: очень дорого.",
+    get(){ const P = price(), rn = D.realized(); if (!P || !rn || !H) return null; const mv = P / rn.value, p = shareBelow(H.qMvrv, mv);
+      return p == null ? null : {s: byShare(p), v: "MVRV " + f2.format(mv) + ", ниже было " + sharp(p) + " дней"}; }},
+  {k: "trend", n: "Тренд", go: "cycle", w: ["глубоко под средней", "ниже средней", "у средней", "выше средней", "далеко над средней"],
+    how: "Тренд: цена к своей средней за 200 дней против истории, пороги те же: 10, 30, 70 и 90% дней.",
+    get(){ const P = price(), dc = (S.dayCandles || []).slice(-200); if (!P || dc.length < 200 || !H) return null;
+      const my = P / (dc.reduce((a, c) => a + c.c, 0) / 200), p = shareBelow(H.qMayer, my);
+      return p == null ? null : {s: byShare(p), v: "цена к средней за 200 дней: " + f2.format(my)}; }},
+  {k: "mood", n: "Настроение", go: "mood", w: ["крайний страх", "страх", "нейтрально", "жадность", "крайняя жадность"],
+    how: "Настроение: индекс страха и жадности. До 24: крайний страх; 25–44: страх; 45–55: нейтрально; 56–75: жадность; выше: крайняя жадность.",
+    get(){ if (!fg) return null; const last = fg.rows[fg.rows.length - 1]; if (Date.now() - last.t >= 4 * DAY) return null; const v = last.v;
+      return {s: v <= 24 ? -2 : v <= 44 ? -1 : v <= 55 ? 0 : v <= 75 ? 1 : 2, v: "индекс страха и жадности: " + v}; }},
+  {k: "lev", n: "Плечо", go: "mood", w: ["шорты платят", "плеча мало", "обычное", "лонги платят много", "лонги перегреты"],
+    how: "Плечо: средний фандинг перпа BTC на Hyperliquid за неделю в пересчёте на год. Ниже нуля: платят шорты; до 6%: плеча мало; 6–15%: обычное; 15–30%: лонги платят много; выше: перегрев.",
+    get(){ if (!fu) return null; const p = fu.pts, last = p[p.length - 1]; if (Date.now() - last.t >= 6 * 3600e3) return null;
+      const a = p.filter((x) => x.t > last.t - 7 * DAY); if (a.length < 24) return null;
+      const y = yearly(a.reduce((q, x) => q + x.f, 0) / a.length);
+      return {s: y < 0 ? -2 : y < 6 ? -1 : y <= 15 ? 0 : y <= 30 ? 1 : 2, v: "фандинг за неделю: " + pct(y) + " в год"}; }},
+  {k: "flow", n: "Деньги в крипте", go: "mood", w: ["деньги уходят", "приток иссяк", "умеренный приток", "приток", "сильный приток"],
+    how: "Деньги в крипте: изменение объёма долларовых стейблкоинов за 30 дней. Ниже −1%: деньги уходят; до +0,5%: приток иссяк; до +2%: умеренный приток; до +4%: приток; выше: сильный приток.",
+    get(){ if (!st) return null; const r = st.rows, last = r[r.length - 1]; if (Date.now() - utcMs(last.d) >= 5 * DAY) return null;
+      const d = addDays(last.d, -30); let x = null; for (const y of r){ if (y.d <= d) x = y; else break; }
+      if (!x) return null; const ch = (last.v / x.v - 1) * 100;
+      return {s: ch < -1 ? -2 : ch < 0.5 ? -1 : ch <= 2 ? 0 : ch <= 4 ? 1 : 2, v: "стейблкоины: " + pct(ch) + " за 30 дней"}; }},
+  {k: "world", n: "Ликвидность мира", go: "mood", w: ["сжимается", "слегка сжимается", "почти не растёт", "растёт", "быстро растёт"],
+    how: "Ликвидность мира: балансы ФРС, ЕЦБ и Банка Японии в долларах, изменение за год. Ниже −3%: сжимается; до нуля: слегка сжимается; до +4%: почти не растёт; до +10%: растёт; выше: быстро растёт.",
+    get(){ if (!M || Date.now() - M.updated >= 20 * DAY) return null; const x = lqLast("cb"), ch = x ? x.ch(52) : null; if (ch == null) return null;
+      return {s: ch < -3 ? -2 : ch < 0 ? -1 : ch <= 4 ? 0 : ch <= 10 ? 1 : 2, v: "балансы центробанков: " + pct(ch) + " за год"}; }},
+  {k: "fed", n: "ФРС", go: "fed", w: ["ждут повышения ставки", "повышение возможно", "ставку не тронут", "снижение возможно", "ждут снижения ставки"],
+    how: "ФРС: шансы на ближайшем заседании по бирже прогнозов Kalshi, повышение минус снижение. Больше 50 пунктов: ждут повышения; больше 15: повышение возможно; от −15 до +15: ставку не тронут; дальше зеркально для снижения.",
+    get(){ const o = D.fedOdds ? D.fedOdds() : null; if (!o) return null;
+      const d = o.up - o.down, top = [["повышение", o.up], ["без изменений", o.hold], ["снижение", o.down]].sort((a, b) => b[1] - a[1])[0];
+      return {s: d > 50 ? -2 : d > 15 ? -1 : d >= -15 ? 0 : d >= -50 ? 1 : 2, v: isoDay(o.date) + ": " + top[0] + " " + pc1(top[1])}; }},
+];
+let tmLast = null;
+function tmFill(el, s, word, sub){
+  el.querySelector(".tm-v").textContent = word; el.querySelector(".tm-s").textContent = sub;
+  if (s == null) delete el.dataset.s; else el.dataset.s = String(s);
+  el.querySelectorAll(".tm-m i").forEach((i, n) => i.classList.toggle("on", s != null && n === s + 2));
+}
+function renderSummary(){
+  const grid = $("tmGrid");
+  if (!grid.childElementCount){
+    const cell = (tag, attrs, name) => h(tag, attrs, h("span", {class: "tm-l", text: name}), h("b", {class: "tm-v"}),
+      h("span", {class: "tm-m", "aria-hidden": "true"}, h("i"), h("i"), h("i"), h("i"), h("i")), h("span", {class: "tm-s"}));
+    grid.append(cell("div", {class: "tm tm-all", id: "tmAll"}, "Итог"));
+    for (const x of TM) grid.append(cell("a", {class: "tm", id: "tm-" + x.k, href: "#" + x.go, "data-go": x.go}, x.n));
+    for (const x of TM) $("tmHow").append(h("li", {text: x.how}));
+  }
+  const got = TM.map((x) => { try { const r = x.get(); return r && r.s >= -2 && r.s <= 2 ? r : null; } catch (e){ return null; } });
+  const live = got.filter(Boolean);
+  tmLast = TM.map((x, i) => [x.k, got[i] ? got[i].s : null]);
+  $("temp").hidden = live.length < 3;
+  if (live.length < 3) return;
+  TM.forEach((x, i) => { const r = got[i]; tmFill($("tm-" + x.k), r ? r.s : null, r ? x.w[r.s + 2] : "нет данных", r ? r.v : "источник не ответил"); });
+  const avg = live.reduce((a, r) => a + r.s, 0) / live.length, idx = avg <= -1.25 ? -2 : avg <= -0.4 ? -1 : avg < 0.4 ? 0 : avg < 1.25 ? 1 : 2;
+  const cold = live.filter((r) => r.s < 0).length, hot = live.filter((r) => r.s > 0).length, flat = live.length - cold - hot, n = live.length;
+  const sig = (k) => plural(k, "сигнал", "сигнала", "сигналов");
+  const text = hot === 0 && cold > 0 ? cold + " из " + n + " " + sig(n) + " холоднее нормы"
+    : cold === 0 && hot > 0 ? hot + " из " + n + " " + sig(n) + " горячее нормы"
+    : cold === 0 && hot === 0 ? "все " + n + " " + sig(n) + " в норме"
+    : "холодных " + cold + ", в норме " + flat + ", горячих " + hot;
+  tmFill($("tmAll"), idx, TM_WORD[idx + 2], text + (n < TM.length ? "; без данных: " + (TM.length - n) : ""));
+}
+D.summary = renderSummary;
+
 /* ================= tokens: revenue against market value ================= */
 let tok = null;
 async function loadTokens(){
@@ -633,10 +706,11 @@ function renderTokens(){
 
 /* ================= wiring ================= */
 S.onLevels = () => { renderCycle(); tailCycle(); };
-S.onCandles = () => { drawCycle(); renderCycle(); drawLiq(); };
+S.onCandles = () => { drawCycle(); renderCycle(); drawLiq(); renderSummary(); };
 if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { for (const [c, recolour] of charts){ c.applyOptions(chartOpts()); recolour(); } });
 loadHistory().then(drawLiq); loadDvol(); loadFng(); loadFunding(); loadLiq(); loadTokens(); loadMacro();
-setInterval(() => { if (document.hidden) return; renderCycle(); tailCycle(); renderTokens(); tailLiq(); }, 15000);
+setInterval(() => { if (document.hidden) return; renderCycle(); tailCycle(); renderTokens(); tailLiq(); renderSummary(); }, 15000);
+setTimeout(renderSummary, 2500); setTimeout(renderSummary, 6000);   // the first sources answer within seconds; after that the 15-second tick keeps it current
 setInterval(loadDvol, 10 * 60e3);
 setInterval(loadFunding, 10 * 60e3);
 setInterval(loadFng, 3600e3);
@@ -645,5 +719,6 @@ setInterval(loadMacro, 3 * 3600e3);
 document.addEventListener("visibilitychange", () => { if (!document.hidden){ loadDvol(); loadFunding(); } });
 D.insight = () => ({hist: H ? {n: H.n, end: H.end, pts: cyPts.length, last: cyPts[cyPts.length - 1] || null, range: cyRange} : null, dvol, fg: fg ? fg.rows.length : 0, fu: fu ? fu.pts.length : 0, fuDays: fuDays.length,
   st: st ? st.rows.length : 0, tok: tok ? tok.tokens.length : 0, touch: typeof S.touch === "function",
+  temp: tmLast,
   macro: M ? {weeks: M.t.length, series: Object.keys(M.series), updated: M.updated, state: Object.assign({}, lq), lines: lqLines.map((l) => l.k), left: lqLeft ? lqLeft.k : null, read: $("lqRead").textContent} : null});
 })();

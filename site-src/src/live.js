@@ -655,6 +655,7 @@ async function loadFed(){
   }
   if (got) FED = got;
   renderFed(); renderOdds();
+  if (D.summary) D.summary();
 }
 function fedSchedule(){   // the published calendar, continued by meetings the odds market already lists beyond it
   const sc = CAL ? CAL.schedule.slice() : [], lastEnd = sc.length ? sc[sc.length - 1].end : "";
@@ -945,6 +946,16 @@ D.etfReload = (k) => loadSoso(k || ETF[eIdx].k, true);
 D.kit = {hl, getJson, css, chartOpts, clock, dark, LW, isoOf, isoDay, dayMonth, pc1, big, sane, quote: (k) => Q[k] || null, applyLevels,
   dataUrl: (name) => { const m = /^([a-z0-9-]+)\.github\.io$/i.exec(location.hostname), repo = location.pathname.split("/")[1]; return m && repo ? "https://raw.githubusercontent.com/" + m[1] + "/" + repo + "/data/" + name : ""; }};
 D.realized = realizedPick;
+D.fedOdds = () => {   // the nearest meeting with a decision and what the market expects from it, for the summary of signals
+  const now = Date.now();
+  if (!FED || !FED.oddsAt || now - FED.oddsAt >= FED_DEAD) return null;
+  for (const sc of fedSchedule()){
+    if (sc.at <= now || sc.noDecision) continue;
+    const m = FED.meetings.find((x) => x.date === sc.end);
+    return m && [m.up, m.hold, m.down].every((v) => typeof v === "number" && isFinite(v)) ? {date: sc.end, up: m.up, hold: m.hold, down: m.down} : null;
+  }
+  return null;
+};
 D.fed = () => ({sel: fedSel, cal: CAL ? CAL.schedule.length : null, fed: FED && {cur: FED.cur, bandAsOf: FED.bandAsOf, last: FED.last, meetings: FED.meetings.length, hist: FED.hist.length, updated: FED.updated, oddsAt: FED.oddsAt}, dataUrl: fedDataUrl()});
 D.levels = () => ({feed: lvFeed, low: lvLow, wma: lvWma, set: S.lv});
 D.odds = () => FO && {key: FO.key, at: FO.at, mids: foMids, dayAgo: foDayAgo, range: foRange, pts: Object.fromEntries(Object.entries(foHist).map(([k, v]) => [k, v.length])), series: Object.keys(foSeries).length};
