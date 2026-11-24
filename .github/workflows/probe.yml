@@ -1,0 +1,13 @@
+name: probe
+on:
+  push:
+    branches: [probe]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/probe.py
