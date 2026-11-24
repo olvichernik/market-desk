@@ -78,7 +78,12 @@ jobs:
               age = 1e9
           # the 03:xx UTC run, far from the morning report's own push; or any run if a day was missed
           print('yes' if (dt.datetime.now(dt.timezone.utc).hour == 3 and age > 12 * 3600) or age > 30 * 3600 else 'no')")
-          if [ "$due" != "yes" ] && [ "${{ github.event_name }}" = "schedule" ]; then
+          # routine runs (the schedule and the runs this workflow books for itself) copy once a day;
+          # a push or a forced manual run copies at once
+          routine=no
+          if [ "${{ github.event_name }}" = "schedule" ]; then routine=yes; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force }}" != "true" ]; then routine=yes; fi
+          if [ "$due" != "yes" ] && [ "$routine" = "yes" ]; then
             echo "Копия в main свежая"
             exit 0
           fi
