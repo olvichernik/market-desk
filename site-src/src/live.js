@@ -775,11 +775,12 @@ async function loadLevels(){
 async function loadCandleLevels(){
   const now = Date.now();
   try {
-    const rows = await hl({type: "candleSnapshot", req: {coin: "BTC", interval: "1d", startTime: now - 365 * 864e5, endTime: now}});
+    // from before the cycle's peak, so the cycle block can find the highest and the lowest traded price by itself
+    const rows = await hl({type: "candleSnapshot", req: {coin: "BTC", interval: "1d", startTime: Math.min(now - 365 * 864e5, Date.UTC(2025, 8, 1)), endTime: now}});
     const ok = rows.filter(sane).sort((a, b) => a.t - b.t);
-    const lows = ok.map((r) => +r.l).filter((v) => v > 0);
+    const lows = ok.filter((r) => +r.t >= now - 365 * 864e5).map((r) => +r.l).filter((v) => v > 0);
     if (lows.length > 300) lvLow = Math.min(...lows);
-    S.dayCandles = ok.map((r) => ({t: +r.t, c: +r.c, l: +r.l})).filter((r) => r.c > 0);
+    S.dayCandles = ok.map((r) => ({t: +r.t, c: +r.c, l: +r.l, h: +r.h})).filter((r) => r.c > 0);
   } catch (e){}
   try {
     const rows = await hl({type: "candleSnapshot", req: {coin: "BTC", interval: "1w", startTime: now - 520 * 7 * 864e5, endTime: now}});

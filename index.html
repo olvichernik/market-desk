@@ -2784,11 +2784,12 @@ async function loadLevels(){
 async function loadCandleLevels(){
   const now = Date.now();
   try {
-    const rows = await hl({type: "candleSnapshot", req: {coin: "BTC", interval: "1d", startTime: now - 365 * 864e5, endTime: now}});
+    // from before the cycle's peak, so the cycle block can find the highest and the lowest traded price by itself
+    const rows = await hl({type: "candleSnapshot", req: {coin: "BTC", interval: "1d", startTime: Math.min(now - 365 * 864e5, Date.UTC(2025, 8, 1)), endTime: now}});
     const ok = rows.filter(sane).sort((a, b) => a.t - b.t);
-    const lows = ok.map((r) => +r.l).filter((v) => v > 0);
+    const lows = ok.filter((r) => +r.t >= now - 365 * 864e5).map((r) => +r.l).filter((v) => v > 0);
     if (lows.length > 300) lvLow = Math.min(...lows);
-    S.dayCandles = ok.map((r) => ({t: +r.t, c: +r.c, l: +r.l})).filter((r) => r.c > 0);
+    S.dayCandles = ok.map((r) => ({t: +r.t, c: +r.c, l: +r.l, h: +r.h})).filter((r) => r.c > 0);
   } catch (e){}
   try {
     const rows = await hl({type: "candleSnapshot", req: {coin: "BTC", interval: "1w", startTime: now - 520 * 7 * 864e5, endTime: now}});
@@ -3186,11 +3187,12 @@ function renderCycle(){
   if (!H){ sec.hidden = true; return; }
   sec.hidden = false;
   const P = price(), today = isoOf(Date.now()), rn = D.realized();
-  // the cycle's peak and its low so far: the history file, then daily closes after it, then the live price
+  // the cycle's peak and its low so far, by the highest and the lowest traded price and not by a day's close:
+  // the values kept in the history file, then every daily candle since that peak, then the live price
   let peak = {d: H.cur.peak, px: H.cur.peakPx}, low = {d: H.cur.low, px: H.cur.lowPx, r: H.cur.lowR};
-  const step = (d, px) => { if (px > peak.px){ peak = {d, px}; low = {d, px, r: null}; } else if (px < low.px) low = {d, px, r: null}; };
-  for (const c of S.dayCandles || []){ const d = isoOf(c.t); if (d > H.end && d < today) step(d, c.c); }
-  if (P) step(today, P);
+  const step = (d, hi, lo) => { if (hi > peak.px){ peak = {d, px: hi}; low = {d, px: lo, r: null}; } else if (lo < low.px) low = {d, px: lo, r: null}; };
+  for (const c of S.dayCandles || []){ const d = isoOf(c.t); if (d >= H.cur.peak && d <= today) step(d, c.h > 0 ? c.h : c.c, c.l > 0 ? c.l : c.c); }
+  if (P) step(today, P, P);
   const dayNo = (d) => Math.round((utcMs(d) - utcMs(peak.d)) / DAY);
   const days = dayNo(today), dd = P ? (P / peak.px - 1) * 100 : null, lowDd = (low.px / peak.px - 1) * 100;
   if (low.r == null){ const r = realizedAt(low.d) || (rn ? rn.value : null); low.r = r ? low.px / r : null; }
@@ -3240,8 +3242,10 @@ function renderCycle(){
   const src = H.url ? h("a", {href: H.url, target: "_blank", rel: "noopener noreferrer", text: H.src}) : H.src;
   $("cyNote").replaceChildren("Реализованная цена: средняя цена, по которой все биткойны последний раз двигались в блокчейне, то есть средняя цена покупки всего рынка."
     + (H.belowShare != null ? " Ниже неё цена была " + nf1.format(H.belowShare) + "% всех дней с 2011 года" + (H.lastBelow ? ", последний раз " + fullDate(H.lastBelow) : "") + "." : "")
-    + " В таблице для прошлых циклов стоит день дна, для этого: минимум на сегодня и текущий момент. История по " + fullDate(H.end) + ": ", src,
-    ", по дневным значениям; дальше реализованная цена приходит от BGeometrics с задержкой около недели, цена с Hyperliquid.");
+    + " В таблице для прошлых циклов стоит день дна, для этого: минимум на сегодня и текущий момент."
+    + " Пик и минимум каждого цикла взяты по самой высокой и самой низкой цене сделок, а не по закрытию дня: прошлые циклы по бирже Bitstamp, этот по свечам Hyperliquid, на других биржах цифры отличаются на десятые доли процента."
+    + " История реализованной цены по " + fullDate(H.end) + ": ", src,
+    ", по дневным значениям; дальше она приходит от BGeometrics с задержкой около недели.");
   set("cyChartNote", "Шкала логарифмическая: равное расстояние означает равное изменение в процентах. Красные полосы: недели, когда цена была ниже реализованной. По точке на неделю, последняя точка следует за живой ценой.");
 }
 for (const b of document.querySelectorAll("#cyRange button")) b.addEventListener("click", () => { cyRange = b.dataset.r; lsSet("desk.cy", cyRange); setCyRange(); });
